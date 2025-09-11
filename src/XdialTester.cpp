@@ -24,7 +24,7 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 
-static const char *VERSION = "0.1.1";
+static const char *VERSION = "0.1.3";
 
 int main(int argc, char *argv[])
 {
@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     } while (!nappmgr->getConnectStatus());
     nappmgr->registerForEvents();
-    nappmgr->enableCasting();
-    
+    nappmgr->checkAndEnableCasting();
+    nappmgr->registerYoutube();
 
     nappmgr->waitForTermSignal();
 

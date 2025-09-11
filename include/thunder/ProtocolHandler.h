@@ -25,6 +25,7 @@ std::string getSubscribeRequest(const std::string &callsignWithVer, const std::s
 std::string getUnSubscribeRequest(const std::string &callsignWithVer, const std::string &event, int &id);
 std::string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
 std::string enableCastingToJson(bool enable = true);
+std::string getYoutubeRegisterToJson(int &id);
 std::string getThunderMethodToJson(const std::string &method, int &id);
 std::string isCastingEnabledToJson(int &);
 bool convertResultStringToArray(const std::string &root, const std::string key, std::vector<std::string> &arr);

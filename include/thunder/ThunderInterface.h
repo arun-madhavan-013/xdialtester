@@ -60,6 +60,7 @@ public:
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
+    bool enableYoutubeCasting();
 private:
     TransportHandler *mp_handler;
     bool m_isInitialized;

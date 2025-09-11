@@ -25,16 +25,22 @@ using std::cout;
 using std::endl;
 
 bool tdebug = false;
-int TransportHandler::initialize()
+int TransportHandler::initializeTransport()
 {
 
     int status = 0;
     try
     {
-        // set logging policy if needed
+
         m_client.clear_access_channels(websocketpp::log::alevel::frame_header);
         m_client.clear_access_channels(websocketpp::log::alevel::frame_payload);
-        // c.set_error_channels(websocketpp::log::elevel::none);
+
+        // Clear all logs
+        //  m_client.clear_error_channels(websocketpp::log::elevel::none);
+
+        // set logging policy if needed
+        // m_client.set_access_channels(websocketpp::log::alevel::all);
+        // m_client.set_error_channels(websocketpp::log::elevel::all);
 
         // Initialize ASIO
         m_client.init_asio();
@@ -49,6 +55,7 @@ int TransportHandler::initialize()
                                      { processResponse(hdl, msg); });
         m_client.set_close_handler([&, this](websocketpp::connection_hdl hdl)
                                    { disconnected(hdl); });
+        cout << "[TransportHandler::initialize] " << "Connecting to " << m_wsUrl << endl;
     }
     catch (const std::exception &e)
     {

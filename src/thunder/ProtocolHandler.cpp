@@ -50,6 +50,49 @@ string getThunderMethodToJson(const string &method, int &id)
 
     return getStringFromJson(root);
 }
+// //{"applications":[{"names":["YouTube"],"cors":[".youtube.com"],"properties":{"allowStop":false}},{"names":["YouTubeTV"],"cors":[".youtube.com"],"properties":{"allowStop":false}}]}
+    
+string getYoutubeRegisterToJson(int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.Xcast.1.registerApplications";
+
+    Json::Value params;
+    Json::Value applications(Json::arrayValue);
+
+    Json::Value app1;
+    app1["name"] = "YouTube";
+    app1["prefix"] = "myYoutube";
+    Json::Value cors(Json::arrayValue);
+    cors.append(".youtube.com");
+    app1["cors"] = cors;
+    Json::Value properties;
+    properties["allowStop"] = false;
+    app1["properties"] = properties;
+
+    applications.append(app1);
+
+    Json::Value app2;
+
+    app2["name"] = "YouTubeTV";
+    app2["prefix"] = "myYouTubeTV";
+    Json::Value cors2(Json::arrayValue);
+    cors2.append(".youtube.com");
+    app2["cors"] = cors2;
+    Json::Value properties2;
+    properties2["allowStop"] = false;
+    app2["properties"] = properties2;
+
+    applications.append(app2);
+
+    params["applications"] = applications;
+
+    root["params"] = params;
+
+    return getStringFromJson(root);
+}
 string enableCastingToJson(bool enable )
 {
     Json::Value root;
@@ -241,9 +284,9 @@ bool getParamFromResult(const string &jsonMsg, const string & param, string &val
     bool status = false;
 
     reader.parse(jsonMsg, root);
-    if (root["params"].isObject())
+    if (root["result"].isObject())
     {
-        Json::Value params = root["params"];
+        Json::Value params = root["result"];
         value = params[param].asString();
         status = true;
     }

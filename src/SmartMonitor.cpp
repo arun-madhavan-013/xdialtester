@@ -81,7 +81,7 @@ int SmartMonitor::initialize()
     LOGTRACE("Initializing new instance.. ");
 
     int status = false;
- 
+
     {
         lock_guard<mutex> lkgd(m_lock);
         m_isActive = true;
@@ -105,31 +105,41 @@ void SmartMonitor::registerForEvents()
 {
     LOGTRACE("Enter.. ");
     tiface->registerDialRequests([&, this](DIALEVENTS dialEvent, const string &appName, const string &appId)
-                                  { onDialEvent(dialEvent, appName, appId); });
+                                 { onDialEvent(dialEvent, appName, appId); });
 }
 
 void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const string &appName, const string &appId)
 {
     LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent, appName.c_str(), appId.c_str());
-
 }
 
 void SmartMonitor::unRegisterForEvents()
 {
     tiface->removeDialListener();
-
 }
 
-bool SmartMonitor::enableCasting()
+bool SmartMonitor::checkAndEnableCasting()
 {
     LOGTRACE("Enabling casting.. ");
     bool status = false;
     string result;
     tiface->isCastingEnabled(result);
-    LOGTRACE("Casting status .. %s" , result.c_str());
-    status = tiface->enableCasting();
-    LOGTRACE("Casting result .. %s" ,(status?"true":"false"));
+    LOGTRACE("Casting status .. %s", result.c_str());
+    if (result == "false")
+    {
+        status = tiface->enableCasting();
+        LOGTRACE("Casting result .. %s", (status ? "true" : "false"));
+    }
+    tiface->getFriendlyName(result);
+    LOGTRACE("Friendly name is .. %s", result.c_str());
     return status;
+}
+bool SmartMonitor::registerYoutube()
+{
+    LOGTRACE("Enabling youtube casting.. ");
+    bool status = false;
+    string result;
+    return tiface->enableYoutubeCasting();
 }
 
 bool SmartMonitor::getConnectStatus()

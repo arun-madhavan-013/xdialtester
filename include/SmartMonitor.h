@@ -61,7 +61,8 @@ public:
     void unRegisterForEvents();
     void waitForTermSignal();
     bool getConnectStatus();
-    bool enableCasting();
+    bool checkAndEnableCasting();
+    bool registerYoutube();
 
     static SmartMonitor *getInstance();
 

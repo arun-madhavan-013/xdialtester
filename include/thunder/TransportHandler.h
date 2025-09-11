@@ -54,7 +54,7 @@ public:
         return m_isConnected;
     }
 
-    int initialize();
+    int initializeTransport();
     void registerConnectionHandler(std::function<void(bool)> callback);
     void registerMessageHandler(std::function<void(const std::string)> callback);
     void connect();

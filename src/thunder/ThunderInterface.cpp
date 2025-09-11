@@ -49,14 +49,13 @@ void ThunderInterface::onMsgReceived(const string message)
 int ThunderInterface::initialize()
 {
     LOGTRACE(" Enter.");
-    int status = mp_handler->initialize();
-
     mp_handler->registerConnectionHandler([this](bool isConnected)
                                           { connected(isConnected); });
     mp_handler->registerMessageHandler([this](string message)
                                        { onMsgReceived(message); });
 
     ResponseHandler::getInstance()->registerEventListener(this);
+    int status = mp_handler->initializeTransport();
     LOGTRACE(" Exit.");
     return status;
 }
@@ -94,7 +93,7 @@ void ThunderInterface::connectToThunder()
 
 bool ThunderInterface::enableCasting(bool enable )
 {
-    LOGTRACE("Enabling casting.. ");
+    LOGTRACE("Enter.. ");
     bool status = false;
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
@@ -137,6 +136,22 @@ bool ThunderInterface::getFriendlyName(std::string &name)
     {
          string response = evtHandler->getRequestStatus(msgId);
          getParamFromResult(response, "friendlyName", name);
+    }
+    return status;
+}
+bool ThunderInterface::enableYoutubeCasting()
+{
+    LOGTRACE("Enabling youtube casting.. ");
+    bool status = false;
+    int msgId = 0;
+
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    std::string jsonmsg = getYoutubeRegisterToJson( msgId);
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+         string response = evtHandler->getRequestStatus(msgId);
+         convertResultStringToBool(response, status);
     }
     return status;
 }
