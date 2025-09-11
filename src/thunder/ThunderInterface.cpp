@@ -210,14 +210,14 @@ void ThunderInterface::registerEvent(const std::string &event, bool isbinding)
  * Implementation of event handlers
  */
 // Do not call this directly. These are callback functions
-void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const std::string &appName, const std::string &appVersion)
+void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-    LOGINFO("%s  %s", appName.c_str(), appVersion.c_str());
+    LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
-        m_dialListener(dialEvent, appName, appVersion);
+        m_dialListener(dialEvent, dialParams);
 }
 
-void ThunderInterface::registerDialRequests(std::function<void(DIALEVENTS, const std::string &, const std::string &)> callback)
+void ThunderInterface::registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback)
 {
     m_dialListener = callback;
 
@@ -239,3 +239,83 @@ void ThunderInterface::removeDialListener()
     registerEvent("onApplicationStateRequest", false);
     registerEvent("onApplicationStopRequest", false);
 }
+std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
+{
+    int id = 0;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    m_appList.clear();
+    string jsonmsg = getClientListToJson(id);
+    LOGINFO("Clients request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToArray(response, "clients", m_appList);
+    }
+    return m_appList;
+}
+bool ThunderInterface::setAppState(const std::string &appName, const std::string &appId, const std::string &state, int timeout)
+{
+    int id = 0;
+    bool status = false;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = setAppStateToJson(appName, appId, state, id);
+    LOGINFO(" State change request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
+{
+    int id = 0;
+    bool status = false;
+    std::string callsign = (appName == "YouTube") ? "Cobalt" : appName;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = launchAppToJson(callsign, id);
+    LOGINFO(" Launch request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+
+bool ThunderInterface::setStandbyBehaviour()
+{
+    LOGTRACE("Enabling standby behaviour as active.. ");
+    bool status = false;
+    int msgId = 0;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = setStandbyBehaviourToJson(msgId);
+    LOGINFO(" Standby active API : %s", jsonmsg.c_str());
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+         string response = evtHandler->getRequestStatus(msgId);
+         convertResultStringToBool(response, status);
+    }
+    return status;
+}
+bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeout)
+{
+    int id = 0;
+    bool status = false;
+    std::string callsign = (appName == "YouTube") ? "Cobalt" : appName;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = shutdownAppToJson(callsign, id);
+    LOGINFO(" Stop request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+
+

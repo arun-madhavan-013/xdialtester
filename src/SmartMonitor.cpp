@@ -25,7 +25,7 @@
 using namespace std;
 using std::string;
 bool debug = isDebugEnabled();
-const string SmartMonitor::LAUNCH_URL = "http://127.0.0.1:50050/lxresui/index.html#menu";
+
 SmartMonitor *SmartMonitor::_instance = nullptr;
 
 const int THUNDER_TIMEOUT = 2000; // milliseconds
@@ -104,13 +104,50 @@ void SmartMonitor::connectToThunder()
 void SmartMonitor::registerForEvents()
 {
     LOGTRACE("Enter.. ");
-    tiface->registerDialRequests([&, this](DIALEVENTS dialEvent, const string &appName, const string &appId)
-                                 { onDialEvent(dialEvent, appName, appId); });
+    tiface->registerDialRequests([&, this](DIALEVENTS dialEvent,const DialParams & dialParams)
+                                 { onDialEvent(dialEvent, dialParams); });
 }
 
-void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const string &appName, const string &appId)
+void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-    LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent, appName.c_str(), appId.c_str());
+    LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent, dialParams.appName.c_str(), dialParams.appId.c_str());
+    bool running = isAppRunning(dialParams.appName);
+    if (APP_STATE_REQUEST_EVENT == dialEvent)
+    {
+        tiface->setAppState(dialParams.appName, dialParams.appId, running ? "running" : "stopped");
+    }
+    else if (APP_LAUNCH_REQUEST_EVENT == dialEvent)
+    {
+        tiface->launchPremiumApp(dialParams.appName);
+        tiface->setAppState(dialParams.appName, dialParams.appId, "running");
+    }
+    else if (APP_HIDE_REQUEST_EVENT == dialEvent || APP_RESUME_REQUEST_EVENT == dialEvent)
+    {
+        LOGINFO("Ignoring event %d for app %s", dialEvent, dialParams.appName.c_str());
+    }
+    else if (APP_STOP_REQUEST_EVENT == dialEvent)
+    {
+        if (running)
+            tiface->shutdownPremiumApp(dialParams.appName);
+            tiface->setAppState(dialParams.appName, dialParams.appId, "stopped");
+
+    }
+    
+    else
+    {
+        LOGERR("Unknown event %d", dialEvent);
+    }
+}
+bool SmartMonitor::isAppRunning(const string &myapp)
+{
+    std::string callsign = (myapp == "YouTube") ? "Cobalt" : myapp;
+    vector<std::string> apps = tiface->getActiveApplications();
+    for (const string &app : apps)
+    {
+        if (stringCompareIgnoreCase(app, callsign))
+            return true;
+    }
+    return false;
 }
 
 void SmartMonitor::unRegisterForEvents()
@@ -146,4 +183,11 @@ bool SmartMonitor::getConnectStatus()
 {
     LOGTRACE("Connect status is %s.. ", isConnected ? "true" : "false");
     return isConnected;
+}
+bool SmartMonitor::setStandbyBehaviour()
+{
+    LOGTRACE("Enabling standby behaviour as active.. ");
+    bool status = false;
+    string result;
+    return tiface->setStandbyBehaviour();
 }

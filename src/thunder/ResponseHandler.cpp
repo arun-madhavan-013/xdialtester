@@ -59,43 +59,38 @@ void ResponseHandler::handleEvent()
         LOGTRACE("No listeners : exit");
         return;
     }
+    DialParams dialParams;
     if (getEventId(eventMsg, eventName))
     { // Compare against events
         // This is a wierd code. There should be an option to use event list
         if (eventName.find("onApplicationHideRequest") != string::npos)
         {
-            std::string appName, appId;
 
-            if (getDialEventParams(eventMsg, appName, appId))
-                mp_listener->onDialEvents(APP_HIDE_REQUEST_EVENT, appName, appId);
+            if (getDialEventParams(eventMsg, dialParams))
+                mp_listener->onDialEvents(APP_HIDE_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationLaunchRequest") != string::npos)
         {
-            std::string appName, appId;
 
-            if (getDialEventParams(eventMsg, appName, appId))
-                mp_listener->onDialEvents(APP_LAUNCH_REQUEST_EVENT, appName, appId);
+            if (getDialEventParams(eventMsg, dialParams))
+                mp_listener->onDialEvents(APP_LAUNCH_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationResumeRequest") != string::npos)
         {
-            std::string appName, appId;
 
-            if (getDialEventParams(eventMsg, appName, appId))
-                mp_listener->onDialEvents(APP_RESUME_REQUEST_EVENT, appName, appId);
+            if (getDialEventParams(eventMsg, dialParams))
+                mp_listener->onDialEvents(APP_RESUME_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationStopRequest") != string::npos)
         {
-            std::string appName, appId;
-
-            if (getDialEventParams(eventMsg, appName, appId))
-                mp_listener->onDialEvents(APP_STOP_REQUEST_EVENT, appName, appId);
+            if (getDialEventParams(eventMsg, dialParams))
+                mp_listener->onDialEvents(APP_STOP_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationStateRequest") != string::npos)
         {
-            std::string appName, appId;
 
-            if (getDialEventParams(eventMsg, appName, appId))
-                mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, appName, appId);
+            if (getDialEventParams(eventMsg, dialParams))
+                mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
         }
         else
         {
@@ -214,5 +209,5 @@ void ResponseHandler::addMessageToEventQueue(const string msg)
 }
 void ResponseHandler::connectionEvent(bool connected)
 {
-    //This needs to be revisited.
+    // This needs to be revisited.
 }

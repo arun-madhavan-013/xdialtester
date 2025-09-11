@@ -16,7 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <memory>
+#include <sstream>
 #include "json/json.h"
 
 #include "ProtocolHandler.h"
@@ -35,11 +36,13 @@ void addVersion(Json::Value &root, int &id)
 
 string getStringFromJson(Json::Value &root)
 {
-    Json::FastWriter writer;
-    const string json_request = writer.write(root);
-    return json_request;
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = ""; // No indentation, similar to FastWriter
+    std::ostringstream os;
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+    writer->write(root, &os);
+    return os.str();
 }
-//{"applications":[{"names":["YouTube"],"cors":[".youtube.com"],"properties":{"allowStop":false}},{"names":["YouTubeTV"],"cors":[".youtube.com"],"properties":{"allowStop":false}}]}
 
 string getThunderMethodToJson(const string &method, int &id)
 {
@@ -50,8 +53,7 @@ string getThunderMethodToJson(const string &method, int &id)
 
     return getStringFromJson(root);
 }
-// //{"applications":[{"names":["YouTube"],"cors":[".youtube.com"],"properties":{"allowStop":false}},{"names":["YouTubeTV"],"cors":[".youtube.com"],"properties":{"allowStop":false}}]}
-    
+
 string getYoutubeRegisterToJson(int &id)
 {
     Json::Value root;
@@ -93,7 +95,7 @@ string getYoutubeRegisterToJson(int &id)
 
     return getStringFromJson(root);
 }
-string enableCastingToJson(bool enable )
+string enableCastingToJson(bool enable)
 {
     Json::Value root;
     int id = 0;
@@ -145,7 +147,14 @@ string getUnSubscribeRequest(const string &callsignWithVer, const string &event,
 {
     return getSubscribtionRequest(callsignWithVer, event, false, id);
 }
-string getClientList(int &id)
+
+/*
+    Expecting some thing like
+    {"jsonrpc":"2.0","id":4,"result":{"clients":["vol_overlay","amazon","residentapp"],"success":true}
+    and key in this case clients
+*/
+
+string getClientListToJson(int &id)
 {
     Json::Value root;
     addVersion(root, id);
@@ -157,18 +166,24 @@ string getClientList(int &id)
 
 bool getResultObject(const string &jsonMsg, Json::Value &result)
 {
-    Json::Reader reader;
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
     Json::Value root;
+    std::string errs;
 
-    reader.parse(jsonMsg, root);
+    bool parsingSuccessful = reader->parse(
+        jsonMsg.c_str(),
+        jsonMsg.c_str() + jsonMsg.size(),
+        &root,
+        &errs);
+    if (!parsingSuccessful)
+    {
+        return false;
+    }
     result = root["result"];
     return result.isObject();
 }
-/*
-    Expecting some thing like
-    {"jsonrpc":"2.0","id":4,"result":{"clients":["vol_overlay","amazon","residentapp"],"success":true}
-    and key in this case clients
-*/
+
 bool convertResultStringToArray(const string &jsonMsg, const string key, std::vector<string> &arr)
 {
     Json::Value result;
@@ -260,8 +275,7 @@ bool getEventId(const string &jsonMsg, string &evtName)
     return status;
 }
 
-
-bool getDialEventParams(const string &jsonMsg, string &client, string &type)
+bool getDialEventParams(const string &jsonMsg, DialParams &params)
 {
     Json::Reader reader;
     Json::Value root;
@@ -270,14 +284,22 @@ bool getDialEventParams(const string &jsonMsg, string &client, string &type)
     reader.parse(jsonMsg, root);
     if (root["params"].isObject())
     {
-        Json::Value params = root["params"];
-        client = params["applicationName"].asString();
-        type = params["applicationId"].asString();
+        Json::Value jparams = root["params"];
+        params.appName = jparams["applicationName"].asString();
+        if (!jparams["applicationId"].isNull())
+            params.appId = jparams["applicationId"].asString();
+        if (!jparams["strPayLoad"].isNull())
+            params.strPayLoad = jparams["strPayLoad"].asString();
+        if (!jparams["strQuery"].isNull())
+            params.strQuery = jparams["strQuery"].asString();
+        if (!jparams["strAddDataUrl"].isNull())
+            params.strAddDataUrl = jparams["strAddDataUrl"].asString();
         status = true;
     }
     return status;
 }
-bool getParamFromResult(const string &jsonMsg, const string & param, string &value)
+
+bool getParamFromResult(const string &jsonMsg, const string &param, string &value)
 {
     Json::Reader reader;
     Json::Value root;
@@ -293,7 +315,6 @@ bool getParamFromResult(const string &jsonMsg, const string & param, string &val
     return status;
 }
 
-
 bool isDebugEnabled()
 {
     if (getenv("SMDEBUG") != NULL)
@@ -302,4 +323,50 @@ bool isDebugEnabled()
         return true;
     }
     return false;
+}
+
+string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.Xcast.1.setApplicationState";
+    root["params"]["applicationName"] = appName;
+    root["params"]["applicationId"] = appId;
+    root["params"]["state"] = state;
+    root["params"]["error"] = "none";
+
+    return getStringFromJson(root);
+}
+
+string launchAppToJson(const string &appName, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.RDKShell.1.launch";
+    root["params"]["callsign"] = appName;
+    root["params"]["type"] = appName;
+
+    return getStringFromJson(root);
+}
+string setStandbyBehaviourToJson(int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.Xcast.1.setStandbyBehavior";
+    root["params"]["standbybehavior"] = "active";
+
+    return getStringFromJson(root);
+}
+string shutdownAppToJson(const string &appName, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.RDKShell.1.destroy";
+    root["params"]["callsign"] = appName;
+
+    return getStringFromJson(root);
 }

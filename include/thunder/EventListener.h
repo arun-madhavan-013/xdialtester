@@ -28,16 +28,26 @@ enum DIALEVENTS
     APP_STOP_REQUEST_EVENT,
     APP_STATE_REQUEST_EVENT
 };
+
+typedef struct _dialParams
+{
+    std::string appName;
+    std::string appId;
+    std::string strPayLoad;
+    std::string strQuery;
+    std::string strAddDataUrl;
+} DialParams;
+
 class EventListener
 {
 protected:
-    std::function<void(DIALEVENTS, const std::string &, const std::string &)> m_dialListener;
+    std::function<void(DIALEVENTS, const DialParams &)> m_dialListener;
 
 public:
-    virtual void registerDialRequests(std::function<void(DIALEVENTS, const std::string &, const std::string &)> callback) = 0;
+    virtual void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) = 0;
 
     virtual void removeDialListener() = 0;
 
     // Do not call this directly. These are callback functions
-    virtual void onDialEvents(DIALEVENTS dialEvent, const std::string &appName, const std::string &appVersion) = 0;
+    virtual void onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams) = 0;
 };

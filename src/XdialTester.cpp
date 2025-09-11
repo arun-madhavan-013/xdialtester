@@ -24,26 +24,26 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 
-static const char *VERSION = "0.1.3";
+static const char *VERSION = "1.0.6";
 
 int main(int argc, char *argv[])
 {
     LOGINFO("Smart Monitor: %s" , VERSION);
 
-    SmartMonitor *nappmgr = SmartMonitor::getInstance();
-    nappmgr->initialize();
+    SmartMonitor *smon = SmartMonitor::getInstance();
+    smon->initialize();
     
     do
     {
-        nappmgr->connectToThunder();
+        smon->connectToThunder();
          LOGINFO("Waiting for connection status ");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-    } while (!nappmgr->getConnectStatus());
-    nappmgr->registerForEvents();
-    nappmgr->checkAndEnableCasting();
-    nappmgr->registerYoutube();
-
-    nappmgr->waitForTermSignal();
+    } while (!smon->getConnectStatus());
+    smon->registerForEvents();
+    smon->setStandbyBehaviour();
+    smon->checkAndEnableCasting();
+    smon->registerYoutube();
+    smon->waitForTermSignal();
 
     return 0;
 }

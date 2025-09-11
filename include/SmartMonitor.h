@@ -23,50 +23,48 @@
 #include <mutex>
 #include <map>
 #include <condition_variable>
-//#include "ConfigReader.h"
+// #include "ConfigReader.h"
 #include "thunder/ThunderInterface.h"
 using std::string;
 
 class SmartMonitor
 {
 
-
-    // Variables for exiting on TERM signal.
-    std::condition_variable m_act_cv;
-    volatile bool m_isActive;
-    volatile bool isConnected;
-    std::mutex m_lock;
+  // Variables for exiting on TERM signal.
+  std::condition_variable m_act_cv;
+  volatile bool m_isActive;
+  volatile bool isConnected;
+  std::mutex m_lock;
 
   //  MonitorConfig *config;
 
-    static SmartMonitor *_instance;
-    static const char *resCallsign;
-    ThunderInterface *tiface;
+  static SmartMonitor *_instance;
+  static const char *resCallsign;
+  ThunderInterface *tiface;
 
-    const static string LAUNCH_URL;
-    std::string m_activeApp;
-    void onDialEvent(DIALEVENTS dialEvent, const string &appName, const string &appId);
-    
-    SmartMonitor();
-    ~SmartMonitor();
-    void handleTermSignal(int _sig);
+  void onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams);
+
+  SmartMonitor();
+  ~SmartMonitor();
+  void handleTermSignal(int _sig);
 
 public:
-    int initialize();
-    void connectToThunder();
+  int initialize();
+  void connectToThunder();
 
-   
-    void registerForEvents();
+  void registerForEvents();
 
-    void unRegisterForEvents();
-    void waitForTermSignal();
-    bool getConnectStatus();
-    bool checkAndEnableCasting();
-    bool registerYoutube();
+  void unRegisterForEvents();
+  void waitForTermSignal();
+  bool getConnectStatus();
+  bool checkAndEnableCasting();
+  bool registerYoutube();
+  bool isAppRunning(const string &myapp);
+  bool setStandbyBehaviour();
 
-    static SmartMonitor *getInstance();
+  static SmartMonitor *getInstance();
 
-    // no copying allowed
-    SmartMonitor(const SmartMonitor &) = delete;
-    SmartMonitor &operator=(const SmartMonitor &) = delete;
+  // no copying allowed
+  SmartMonitor(const SmartMonitor &) = delete;
+  SmartMonitor &operator=(const SmartMonitor &) = delete;
 };

@@ -27,6 +27,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
+#include "EventListener.h"
 #define REQUEST_TIMEOUT_IN_MS 1000
 
 // These will be used for memory events to differentiate between critical and low memory states.
@@ -63,17 +64,15 @@ bool isDebugEnabled();
 
 bool getMessageId(const string &jsonMsg, int &msgId);
 bool getEventId(const string &jsonMsg, string &evtName);
-bool getDialEventParams(const string &jsonMsg, string &, string &);
+bool getDialEventParams(const string &jsonMsg, DialParams &params);
 
 bool getParamFromResult(const string &jsonMsg, const string & param, string &value);
 
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
-// #define LOGTRACE(fmt, ...) do { syslog(LOG_DEBUG, "[%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-// #define LOGINFO(fmt, ...) do { syslog(LOG_INFO, "[%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-// #define LOGWARN(fmt, ...) do { syslog(LOG_WARNING, "[%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-// #define LOGERR(fmt, ...) do { syslog(LOG_ERR, "[%s:%d] %s: " fmt "\n",  __FILENAME__ , __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
 
-#define LOGTRACE(fmt, ...) do { fprintf(stderr, "TRACE [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+//#define LOGTRACE(fmt, ...) do { fprintf(stderr, "TRACE [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+#define LOGTRACE(fmt, ...) 
+
 #define LOGINFO(fmt, ...) do { fprintf(stderr, "INFO [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
 #define LOGWARN(fmt, ...) do { fprintf(stderr, "WARN [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
 #define LOGERR(fmt, ...) do { fprintf(stderr, "ERROR [%s:%d] %s: " fmt "\n",  __FILENAME__ , __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)

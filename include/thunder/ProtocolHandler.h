@@ -19,16 +19,19 @@
 
 #pragma once
 #include <string>
-
-
-std::string getSubscribeRequest(const std::string &callsignWithVer, const std::string &event, int &id);
-std::string getUnSubscribeRequest(const std::string &callsignWithVer, const std::string &event, int &id);
-std::string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
-std::string enableCastingToJson(bool enable = true);
-std::string getYoutubeRegisterToJson(int &id);
-std::string getThunderMethodToJson(const std::string &method, int &id);
-std::string isCastingEnabledToJson(int &);
-bool convertResultStringToArray(const std::string &root, const std::string key, std::vector<std::string> &arr);
-bool convertResultStringToBool(const std::string &root, bool &);
-bool convertEventSubResponseToInt(const std::string &root, int &);
-
+using namespace std;
+string getSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
+string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
+string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
+string enableCastingToJson(bool enable = true);
+string getYoutubeRegisterToJson(int &id);
+string getThunderMethodToJson(const string &method, int &id);
+string isCastingEnabledToJson(int &);
+string setStandbyBehaviourToJson(int &id);
+bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
+bool convertResultStringToBool(const string &root, bool &);
+bool convertEventSubResponseToInt(const string &root, int &);
+string getClientListToJson(int &id);
+string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
+string launchAppToJson(const string &appName, int &id);
+string shutdownAppToJson(const string &appName, int &id);
