@@ -20,6 +20,10 @@
 #pragma once
 #include <string>
 using namespace std;
+
+#include "EventListener.h"
+
+
 string getSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
@@ -35,3 +39,4 @@ string getClientListToJson(int &id);
 string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
 string launchAppToJson(const string &appName, int &id);
 string shutdownAppToJson(const string &appName, int &id);
+string sendDeepLinkToJson(const DialParams &dialParams, int &id);

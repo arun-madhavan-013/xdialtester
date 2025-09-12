@@ -164,11 +164,10 @@ string getClientListToJson(int &id)
     return getStringFromJson(root);
 }
 
-bool getResultObject(const string &jsonMsg, Json::Value &result)
+bool parseJson(const string &jsonMsg, Json::Value &root)
 {
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-    Json::Value root;
     std::string errs;
 
     bool parsingSuccessful = reader->parse(
@@ -178,8 +177,16 @@ bool getResultObject(const string &jsonMsg, Json::Value &result)
         &errs);
     if (!parsingSuccessful)
     {
-        return false;
+        LOGERR("Failed to parse the json message: %s, error: %s", jsonMsg.c_str(), errs.c_str());
     }
+    return parsingSuccessful;
+}
+
+bool getResultObject(const string &jsonMsg, Json::Value &result)
+{
+    Json::Value root;
+    if (!parseJson(jsonMsg, root))
+        return false;
     result = root["result"];
     return result.isObject();
 }
@@ -247,70 +254,71 @@ bool convertEventSubResponseToInt(const string &jsonMsg, int &response)
 
 bool getMessageId(const string &jsonMsg, int &msgId)
 {
-    Json::Reader reader;
-    Json::Value root;
     bool status = false;
+    Json::Value root;
 
-    msgId = -1;
-    reader.parse(jsonMsg, root);
-    if (!root["id"].empty())
+    if (parseJson(jsonMsg, root))
     {
-        msgId = root["id"].asInt();
-        status = true;
+        if (!root["id"].empty())
+        {
+            msgId = root["id"].asInt();
+            status = true;
+        }
     }
     return status;
 }
 bool getEventId(const string &jsonMsg, string &evtName)
 {
-    Json::Reader reader;
-    Json::Value root;
     bool status = false;
-
-    reader.parse(jsonMsg, root);
-    if (!root["method"].empty())
+        Json::Value root;
+    if (parseJson(jsonMsg, root))
     {
-        evtName = root["method"].asString();
-        status = true;
+        if (!root["method"].empty())
+        {
+            evtName = root["method"].asString();
+            status = true;
+        }
     }
     return status;
 }
 
 bool getDialEventParams(const string &jsonMsg, DialParams &params)
 {
-    Json::Reader reader;
     Json::Value root;
     bool status = false;
 
-    reader.parse(jsonMsg, root);
-    if (root["params"].isObject())
+    if (parseJson(jsonMsg, root))
     {
-        Json::Value jparams = root["params"];
-        params.appName = jparams["applicationName"].asString();
-        if (!jparams["applicationId"].isNull())
-            params.appId = jparams["applicationId"].asString();
-        if (!jparams["strPayLoad"].isNull())
-            params.strPayLoad = jparams["strPayLoad"].asString();
-        if (!jparams["strQuery"].isNull())
-            params.strQuery = jparams["strQuery"].asString();
-        if (!jparams["strAddDataUrl"].isNull())
-            params.strAddDataUrl = jparams["strAddDataUrl"].asString();
-        status = true;
+        if (root["params"].isObject())
+        {
+            Json::Value jparams = root["params"];
+            params.appName = jparams["applicationName"].asString();
+            if (!jparams["applicationId"].isNull())
+                params.appId = jparams["applicationId"].asString();
+            if (!jparams["strPayLoad"].isNull())
+                params.strPayLoad = jparams["strPayLoad"].asString();
+            if (!jparams["strQuery"].isNull())
+                params.strQuery = jparams["strQuery"].asString();
+            if (!jparams["strAddDataUrl"].isNull())
+                params.strAddDataUrl = jparams["strAddDataUrl"].asString();
+            status = true;
+        }
     }
     return status;
 }
 
 bool getParamFromResult(const string &jsonMsg, const string &param, string &value)
 {
-    Json::Reader reader;
-    Json::Value root;
     bool status = false;
-
-    reader.parse(jsonMsg, root);
-    if (root["result"].isObject())
+    Json::Value root;
+    if (parseJson(jsonMsg, root))
     {
-        Json::Value params = root["result"];
-        value = params[param].asString();
-        status = true;
+        if (root["result"].isObject())
+        {
+            Json::Value params = root["result"];
+            value = params[param].asString();
+            status = true;
+        }
     }
     return status;
 }
@@ -368,5 +376,22 @@ string shutdownAppToJson(const string &appName, int &id)
     root["method"] = "org.rdk.RDKShell.1.destroy";
     root["params"]["callsign"] = appName;
 
+    return getStringFromJson(root);
+}
+
+string sendDeepLinkToJson(const DialParams &dialParams, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "Cobalt.1.deeplink";
+
+    string url = "https://www.youtube.com/tv";
+    url.append("?").append(dialParams.strPayLoad);
+    url.append("&").append(dialParams.strQuery);
+    url.append("&").append(dialParams.strAddDataUrl);
+
+    Json::Value params;
+    root["params"] = url;
     return getStringFromJson(root);
 }

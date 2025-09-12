@@ -147,7 +147,7 @@ bool ThunderInterface::enableYoutubeCasting()
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = getYoutubeRegisterToJson( msgId);
-
+    LOGINFO(" RRegistering Youtube  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId);
@@ -317,5 +317,20 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
     }
     return status;
 }
+bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
+{
+    int id = 0;
+    bool status = false;
+    std::string callsign = (dialParams.appName == "YouTube") ? "Cobalt" : dialParams.appName;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = sendDeepLinkToJson(dialParams, id);
+    LOGINFO(" Deep link request API : %s", jsonmsg.c_str());
 
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
 

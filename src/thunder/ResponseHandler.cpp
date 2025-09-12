@@ -62,7 +62,7 @@ void ResponseHandler::handleEvent()
     DialParams dialParams;
     if (getEventId(eventMsg, eventName))
     { // Compare against events
-        // This is a wierd code. There should be an option to use event list
+
         if (eventName.find("onApplicationHideRequest") != string::npos)
         {
 

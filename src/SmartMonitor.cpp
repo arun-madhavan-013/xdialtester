@@ -118,7 +118,9 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
     }
     else if (APP_LAUNCH_REQUEST_EVENT == dialEvent)
     {
-        tiface->launchPremiumApp(dialParams.appName);
+        if (!running)
+            tiface->launchPremiumApp(dialParams.appName);
+        tiface->sendDeepLinkRequest(dialParams);
         tiface->setAppState(dialParams.appName, dialParams.appId, "running");
     }
     else if (APP_HIDE_REQUEST_EVENT == dialEvent || APP_RESUME_REQUEST_EVENT == dialEvent)

@@ -66,6 +66,7 @@ public:
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool launchPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool shutdownPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
+    bool sendDeepLinkRequest(const DialParams &dialParams);
 private:
     TransportHandler *mp_handler;
     bool m_isInitialized;
