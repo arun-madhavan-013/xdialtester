@@ -115,6 +115,13 @@ void SmartMonitor::registerForEvents()
 void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received RDKShell Event: %s with params: %s", event.c_str(), params.c_str());
+
+	std::string actualEvent = event;
+	size_t dotPos = event.find('.');
+	if (dotPos != std::string::npos) {
+		actualEvent = event.substr(dotPos + 1);
+	}
+
 	// Check if event is any of these
 	static const std::set<std::string> validEvents = {
 		"onApplicationActivated",
@@ -128,9 +135,9 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 		"onPluginSuspended"
 	};
 
-	if (validEvents.find(event) != validEvents.end()) {
-		LOGINFO("Event %s is a valid RDKShell event.", event.c_str());
-		if (event == "onApplicationLaunched") {
+	if (validEvents.find(actualEvent) != validEvents.end()) {
+		LOGINFO("Event %s is a valid RDKShell event.", actualEvent.c_str());
+		if (actualEvent == "onApplicationLaunched") {
 			std::string state = "stopped";
 			// params has the following format: "params": {"client": "org.rdk.Netflix"}
 			// extract client value as appName and set appId as empty string
@@ -145,7 +152,7 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 			}
 		}
 	} else {
-		LOGINFO("Event %s is not a monitored RDKShell event.", event.c_str());
+		LOGINFO("Event %s is not a monitored RDKShell event.", actualEvent.c_str());
 	}
 }
 

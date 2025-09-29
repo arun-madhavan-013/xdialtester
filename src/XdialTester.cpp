@@ -44,7 +44,10 @@ int main(int argc, char *argv[])
 	    if (arg.find("--enable-apps=") != string::npos) {
 		    string apps = arg.substr(arg.find("=") + 1);
 			appCallsigns = apps;
-	    }
+	    } else {
+		    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
+		    return -1;
+		}
     }
 
     SmartMonitor *smon = SmartMonitor::getInstance();

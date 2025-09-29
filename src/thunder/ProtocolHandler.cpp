@@ -197,6 +197,12 @@ string getClientListToJson(int &id)
 
 bool parseJson(const string &jsonMsg, Json::Value &root)
 {
+    // Check for empty JSON message
+    if (jsonMsg.empty()) {
+        LOGERR("Cannot parse empty JSON message");
+        return false;
+    }
+
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
     std::string errs;

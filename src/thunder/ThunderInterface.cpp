@@ -152,8 +152,28 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
 	{
 		string response = evtHandler->getRequestStatus(msgId);
-		LOGINFO(" Plugin state response  : %s", response.c_str());
-		return getValueOfKeyFromJson(response, "state", state);
+
+		Json::Value root;
+		Json::CharReaderBuilder builder;
+		std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+		std::string errs;
+
+		if (reader->parse(response.c_str(), response.c_str() + response.size(), &root, &errs)) {
+			if (root.isMember("result") && root["result"].isArray() && root["result"].size() > 0) {
+				for (const auto& element : root["result"]) {
+					if (element.isMember("callsign") && element["callsign"].asString() == (myapp == "YouTube" ? "Cobalt" : myapp)) {
+						if (element.isMember("state")) {
+							state = element["state"].asString();
+							status = true;
+							LOGINFO(" Plugin state for %s is %s", myapp.c_str(), state.c_str());
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			LOGERR("Failed to parse JSON response: %s", errs.c_str());
+		}
 	}
 	return status;
 }
