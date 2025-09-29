@@ -70,12 +70,6 @@ ThunderInterface::~ThunderInterface()
         mp_thThread->join();
     }
 
-	if (mp_listener) {
-		removeDialListener();
-		removeRDKShellListener();
-		mp_listener = nullptr;
-	}
-
     delete mp_handler;
     delete mp_thThread;
 }
@@ -256,6 +250,13 @@ void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dial
     LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
         m_dialListener(dialEvent, dialParams);
+}
+
+void ThunderInterface::onRDKShellEvents(const std::string &event, const std::string &params)
+{
+	LOGINFO(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	if (nullptr != m_rdkShellListener)
+		m_rdkShellListener(event, params);
 }
 
 void ThunderInterface::registerRDKShellListener(std::function<void(DIALEVENTS, const DialParams &)> callback)

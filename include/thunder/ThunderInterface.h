@@ -65,6 +65,7 @@ public:
     bool setStandbyBehaviour();
     std::vector<string> & getActiveApplications(int timeout = REQUEST_TIMEOUT_IN_MS);
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);
+    bool reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state);
     bool launchPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool shutdownPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool sendDeepLinkRequest(const DialParams &dialParams);

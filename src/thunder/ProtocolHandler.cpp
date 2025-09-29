@@ -64,7 +64,7 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
     Json::Value params;
     Json::Value applications(Json::arrayValue);
 
-	if (appCallsigns.contains("YouTube")) {
+	if (appCallsigns.find("YouTube") != string::npos) {
 		// hardcoding youtube app details for now
 		Json::Value app1;
 		app1["name"] = "YouTube";
@@ -90,7 +90,7 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
 
 		applications.append(app2);
 	}
-	if (appCallsigns.contains("Netflix")) {
+	if (appCallsigns.find("Netflix") != string::npos) {
 		// hardcoding netflix app details for now
 		Json::Value app1;
 		app1["name"] = "Netflix";
@@ -105,7 +105,7 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
 		applications.append(app1);
 	}
 
-	if (appCallsigns.contains("Amazon")) {
+	if (appCallsigns.find("Amazon") != string::npos) {
 		// hardcoding amazon app details for now
 		Json::Value app1;
 		app1["name"] = "AmazonInstantVideo";

@@ -20,6 +20,7 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 #include <csignal>
+#include <set>
 #include <thread>
 
 using namespace std;
