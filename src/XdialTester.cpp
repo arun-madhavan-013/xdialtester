@@ -26,13 +26,17 @@
 
 static const char *VERSION = "1.0.6";
 
+#ifndef GIT_SHORT_SHA
+#define GIT_SHORT_SHA "unknown"
+#endif
+
 /***
  * Main entry point for the application
  * Usage: xdialtester --enable-apps=app1,app2,app3
  */
 int main(int argc, char *argv[])
 {
-    LOGINFO("Smart Monitor: %s" , VERSION);
+    LOGINFO("Smart Monitor: %s (%s)" , VERSION, GIT_SHORT_SHA);
     string appCallsigns = "YouTube,Netflix,Amazon";
     if (argc > 1) {
 	    string arg = argv[1];

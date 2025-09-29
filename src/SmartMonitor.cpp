@@ -220,6 +220,7 @@ bool SmartMonitor::checkAndEnableCasting()
     LOGTRACE("Friendly name is .. %s", result.c_str());
     return status;
 }
+
 bool SmartMonitor::registerDIALApps(const string &appCallsigns)
 {
     LOGTRACE("Enabling Apps for DIAL casting.. ");
@@ -233,6 +234,7 @@ bool SmartMonitor::getConnectStatus()
     LOGTRACE("Connect status is %s.. ", isConnected ? "true" : "false");
     return isConnected;
 }
+
 bool SmartMonitor::setStandbyBehaviour()
 {
     LOGTRACE("Enabling standby behaviour as active.. ");
