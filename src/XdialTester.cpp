@@ -26,13 +26,26 @@
 
 static const char *VERSION = "1.0.6";
 
+/***
+ * Main entry point for the application
+ * Usage: xdialtester --enable-apps=app1,app2,app3
+ */
 int main(int argc, char *argv[])
 {
     LOGINFO("Smart Monitor: %s" , VERSION);
+    string appCallsigns = "YouTube,Netflix,Amazon";
+    if (argc > 1) {
+	    string arg = argv[1];
+	    // parse command line --enable-apps=app1,app2,app3
+	    if (arg.find("--enable-apps=") != string::npos) {
+		    string apps = arg.substr(arg.find("=") + 1);
+			appCallsigns = apps;
+	    }
+    }
 
     SmartMonitor *smon = SmartMonitor::getInstance();
     smon->initialize();
-    
+
     do
     {
         smon->connectToThunder();
@@ -42,7 +55,8 @@ int main(int argc, char *argv[])
     smon->registerForEvents();
     smon->setStandbyBehaviour();
     smon->checkAndEnableCasting();
-    smon->registerYoutube();
+	LOGINFO("Enabling DIAL apps: %s", appCallsigns.c_str());
+    smon->registerDIALApps(appCallsigns);
     smon->waitForTermSignal();
 
     return 0;

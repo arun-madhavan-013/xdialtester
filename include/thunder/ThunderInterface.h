@@ -51,6 +51,7 @@ public:
 
     // Inherited from EventListener class
     void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) override;
+	void registerRDKShellEvents(std::function<void(const std::string &, const DialParams &)> callback) override;
 
     void registerConnectStatusListener(std::function<void(bool)> callback)
     {
@@ -60,7 +61,7 @@ public:
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
-    bool enableYoutubeCasting();
+    bool registerXcastApps(std::string &appCallsigns);
     bool setStandbyBehaviour();
     std::vector<string> & getActiveApplications(int timeout = REQUEST_TIMEOUT_IN_MS);
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);
@@ -80,8 +81,10 @@ private:
     void connected(bool connected);
     void onMsgReceived(const std::string message);
     void registerEvent(const std::string &event, bool isBinding);
+    void registerEvent(const std::string &callsignWithVersion, const std::string &event, bool isBinding);
     bool sendMessage(const std::string jsonmsg, int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool sendSubscriptionMessage(const std::string jsonmsg, int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
 
     void onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams) override;
+	void onRDKShellEvents(const std::string &event, const std::string &params) override;
 };

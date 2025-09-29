@@ -70,6 +70,12 @@ ThunderInterface::~ThunderInterface()
         mp_thThread->join();
     }
 
+	if (mp_listener) {
+		removeDialListener();
+		removeRDKShellListener();
+		mp_listener = nullptr;
+	}
+
     delete mp_handler;
     delete mp_thThread;
 }
@@ -139,15 +145,34 @@ bool ThunderInterface::getFriendlyName(std::string &name)
     }
     return status;
 }
-bool ThunderInterface::enableYoutubeCasting()
+
+bool ThunderInterface::getPluginState(const string &myapp, const string &state)
 {
-    LOGTRACE("Enabling youtube casting.. ");
+	LOGTRACE("Getting plugin state.. ");
+	bool status = false;
+	int msgId = 0;
+
+	ResponseHandler *evtHandler = ResponseHandler::getInstance();
+	std::string jsonmsg = getThunderMethodToJson("Controller.1.status@" + (myapp == "YouTube" ? "Cobalt" : myapp), msgId);
+
+	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+	{
+		string response = evtHandler->getRequestStatus(msgId);
+		LOGINFO(" Plugin state response  : %s", response.c_str());
+		return getValueOfKeyFromJson(response, "state", state);
+	}
+	return status;
+}
+
+bool ThunderInterface::registerXcastApps(const string &appCallsigns)
+{
+    LOGTRACE("%s", __func__);
     bool status = false;
     int msgId = 0;
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
-    std::string jsonmsg = getYoutubeRegisterToJson( msgId);
-    LOGINFO(" RRegistering Youtube  : %s", jsonmsg.c_str());
+    std::string jsonmsg = getRegisterAppToJson(msgId, appCallsigns);
+    LOGINFO(" Registering Apps  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId);
@@ -205,6 +230,22 @@ void ThunderInterface::registerEvent(const std::string &event, bool isbinding)
 
     LOGINFO(" Event %s, response  %d ", event.c_str(), status);
 }
+
+void ThunderInterface::registerEvent(const std::string &callsignWithVersion, const std::string &event, bool isbinding)
+{
+	int msgId = 0;
+	bool status = false;
+
+	std::string jsonmsg;
+	if (isbinding)
+		jsonmsg = getSubscribeRequest(callsignWithVersion, event, msgId);
+	else
+		jsonmsg = getUnSubscribeRequest(callsignWithVersion, event, msgId);
+	status = sendMessage(jsonmsg, msgId);
+
+	LOGINFO(" Event %s, response  %d ", event.c_str(), status);
+}
+
 /**
  *
  * Implementation of event handlers
@@ -215,6 +256,36 @@ void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dial
     LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
         m_dialListener(dialEvent, dialParams);
+}
+
+void ThunderInterface::registerRDKShellListener(std::function<void(DIALEVENTS, const DialParams &)> callback)
+{
+    m_rdkShellListener = callback;
+
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", true);
+}
+
+void ThunderInterface::removeRDKShellListener()
+{
+    m_rdkShellListener = nullptr;
+
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", false);
+    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", false);
+    registerEvent("org.rdk.RDKShell.1.", "onLaunched", false);
+    registerEvent("org.rdk.RDKShell.1.", "onSuspended", false);
+    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", false);
 }
 
 void ThunderInterface::registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback)
@@ -239,6 +310,7 @@ void ThunderInterface::removeDialListener()
     registerEvent("onApplicationStateRequest", false);
     registerEvent("onApplicationStopRequest", false);
 }
+
 std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 {
     int id = 0;
@@ -254,6 +326,7 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
     }
     return m_appList;
 }
+
 bool ThunderInterface::setAppState(const std::string &appName, const std::string &appId, const std::string &state, int timeout)
 {
     int id = 0;
@@ -269,6 +342,21 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
     }
     return status;
 }
+
+bool ThunderInterface::reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state)
+{
+	// convert state to : running, stopped, hidden, suspended
+	if (state == "running" || state == "stopped" || state == "hidden" || state == "suspended")
+	{
+		return setAppState(appName, appId, state);
+	}
+	else
+	{
+		LOGERR("Invalid state %s", state.c_str());
+		return false;
+	}
+}
+
 bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
 {
     int id = 0;
@@ -301,6 +389,24 @@ bool ThunderInterface::setStandbyBehaviour()
     }
     return status;
 }
+
+bool ThunderInterface::suspendPremiumApp(const std::string &appName, int timeout)
+{
+    int id = 0;
+    bool status = false;
+    std::string callsign = (appName == "YouTube") ? "Cobalt" : appName;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = suspendAppToJson(callsign, id);
+    LOGINFO(" Suspend request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+
 bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeout)
 {
     int id = 0;
@@ -333,4 +439,3 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
     }
     return status;
 }
-

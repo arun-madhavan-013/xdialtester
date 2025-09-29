@@ -54,7 +54,7 @@ string getThunderMethodToJson(const string &method, int &id)
     return getStringFromJson(root);
 }
 
-string getYoutubeRegisterToJson(int &id)
+string getRegisterAppToJson(int &id, const string &appCallsigns)
 {
     Json::Value root;
     addVersion(root, id);
@@ -64,30 +64,61 @@ string getYoutubeRegisterToJson(int &id)
     Json::Value params;
     Json::Value applications(Json::arrayValue);
 
-    Json::Value app1;
-    app1["name"] = "YouTube";
-    app1["prefix"] = "myYoutube";
-    Json::Value cors(Json::arrayValue);
-    cors.append(".youtube.com");
-    app1["cors"] = cors;
-    Json::Value properties;
-    properties["allowStop"] = false;
-    app1["properties"] = properties;
+	if (appCallsigns.contains("YouTube")) {
+		// hardcoding youtube app details for now
+		Json::Value app1;
+		app1["name"] = "YouTube";
+		app1["prefix"] = "myYoutube";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".youtube.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
 
-    applications.append(app1);
+		applications.append(app1);
 
-    Json::Value app2;
+		Json::Value app2;
+		app2["name"] = "YouTubeTV";
+		app2["prefix"] = "myYouTubeTV";
+		Json::Value cors2(Json::arrayValue);
+		cors2.append(".youtube.com");
+		app2["cors"] = cors2;
+		Json::Value properties2;
+		properties2["allowStop"] = true;
+		app2["properties"] = properties2;
 
-    app2["name"] = "YouTubeTV";
-    app2["prefix"] = "myYouTubeTV";
-    Json::Value cors2(Json::arrayValue);
-    cors2.append(".youtube.com");
-    app2["cors"] = cors2;
-    Json::Value properties2;
-    properties2["allowStop"] = false;
-    app2["properties"] = properties2;
+		applications.append(app2);
+	}
+	if (appCallsigns.contains("Netflix")) {
+		// hardcoding netflix app details for now
+		Json::Value app1;
+		app1["name"] = "Netflix";
+		app1["prefix"] = "myNetflix";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".netflix.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
 
-    applications.append(app2);
+		applications.append(app1);
+	}
+
+	if (appCallsigns.contains("Amazon")) {
+		// hardcoding amazon app details for now
+		Json::Value app1;
+		app1["name"] = "AmazonInstantVideo";
+		app1["prefix"] = "myPrimeVideo";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".amazon.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
+
+		applications.append(app1);
+	}
 
     params["applications"] = applications;
 
@@ -307,6 +338,21 @@ bool getDialEventParams(const string &jsonMsg, DialParams &params)
     return status;
 }
 
+bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value)
+{
+	bool status = false;
+	Json::Value root;
+	if (parseJson(jsonMsg, root))
+	{
+		if (!root[key].isNull())
+		{
+			value = root[key].asString();
+			status = true;
+		}
+	}
+	return status;
+}
+
 bool getParamFromResult(const string &jsonMsg, const string &param, string &value)
 {
     bool status = false;
@@ -368,6 +414,18 @@ string setStandbyBehaviourToJson(int &id)
 
     return getStringFromJson(root);
 }
+
+string suspendAppToJson(const string &appName, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.RDKShell.1.suspend";
+    root["params"]["callsign"] = appName;
+
+    return getStringFromJson(root);
+}
+
 string shutdownAppToJson(const string &appName, int &id)
 {
     Json::Value root;

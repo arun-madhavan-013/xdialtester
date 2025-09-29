@@ -28,7 +28,7 @@ string getSubscribeRequest(const string &callsignWithVer, const string &event, i
 string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
 string enableCastingToJson(bool enable = true);
-string getYoutubeRegisterToJson(int &id);
+string getRegisterAppToJson(int &id, const string &appCallsigns);
 string getThunderMethodToJson(const string &method, int &id);
 string isCastingEnabledToJson(int &);
 string setStandbyBehaviourToJson(int &id);
