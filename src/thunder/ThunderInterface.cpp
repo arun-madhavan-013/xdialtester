@@ -366,29 +366,31 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
 
 bool ThunderInterface::reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state)
 {
-	if (appName.empty() || appId.empty() || state.empty()) {
+	if (appName.empty() || state.empty()) {
 		return false;
 	}
+
+	std::string convertedState = state;
 	// Possible plugin states are: Activated, Activation, Deactivated, Deactivation, Destroyed,
 	// Hibernated, Precondition, Resumed, Suspended, Unavailable
 	// convert to : running, stopped, hidden, suspended
-	if ((state == "deactivated") || (state == "deactivation") || (state == "destroyed")
-		|| (state == "unavailable") || (state == "activation") || (state == "precondition")) {
-		state = "stopped";
-	} else if ((state == "activated") || (state == "resumed")) {
-		state = "running";
-	} else if ((state == "suspended") || (state == "hibernated")) {
-		state = "suspended";
+	if ((convertedState == "deactivated") || (convertedState == "deactivation") || (convertedState == "destroyed")
+		|| (convertedState == "unavailable") || (convertedState == "activation") || (convertedState == "precondition")) {
+		convertedState = "stopped";
+	} else if ((convertedState == "activated") || (convertedState == "resumed")) {
+		convertedState = "running";
+	} else if ((convertedState == "suspended") || (convertedState == "hibernated")) {
+		convertedState = "suspended";
 	} else {
-		LOGWARN("Unknown state %s received from app %s, passing it as such.", state.c_str(), appName.c_str());
+		LOGWARN("Unknown state %s received from app %s, passing it as such.", convertedState.c_str(), appName.c_str());
 	}
-	if ((state == "running") || (state == "stopped") || (state == "hidden") || (state == "suspended"))
+	if ((convertedState == "running") || (convertedState == "stopped") || (convertedState == "hidden") || (convertedState == "suspended"))
 	{
-		return setAppState(appName, appId, state);
+		return setAppState(appName, appId, convertedState);
 	}
 	else
 	{
-		LOGERR("Invalid state %s", state.c_str());
+		LOGERR("Invalid state %s", convertedState.c_str());
 		return false;
 	}
 }
