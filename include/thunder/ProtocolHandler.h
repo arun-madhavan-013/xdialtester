@@ -35,6 +35,7 @@ string setStandbyBehaviourToJson(int &id);
 bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
 bool convertResultStringToBool(const string &root, bool &);
 bool convertEventSubResponseToInt(const string &root, int &);
+bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value);
 string getClientListToJson(int &id);
 string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
 string launchAppToJson(const string &appName, int &id);

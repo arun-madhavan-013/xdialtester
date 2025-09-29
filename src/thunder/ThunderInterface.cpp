@@ -259,21 +259,6 @@ void ThunderInterface::onRDKShellEvents(const std::string &event, const std::str
 		m_rdkShellListener(event, params);
 }
 
-void ThunderInterface::registerRDKShellListener(std::function<void(DIALEVENTS, const DialParams &)> callback)
-{
-    m_rdkShellListener = callback;
-
-    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", true);
-    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", true);
-    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", true);
-    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", true);
-    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", true);
-    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", true);
-    registerEvent("org.rdk.RDKShell.1.", "onLaunched", true);
-    registerEvent("org.rdk.RDKShell.1.", "onSuspended", true);
-    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", true);
-}
-
 void ThunderInterface::removeRDKShellListener()
 {
     m_rdkShellListener = nullptr;
@@ -287,6 +272,21 @@ void ThunderInterface::removeRDKShellListener()
     registerEvent("org.rdk.RDKShell.1.", "onLaunched", false);
     registerEvent("org.rdk.RDKShell.1.", "onSuspended", false);
     registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", false);
+}
+
+void ThunderInterface::registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback)
+{
+    m_rdkShellListener = callback;
+
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", true);
 }
 
 void ThunderInterface::registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback)

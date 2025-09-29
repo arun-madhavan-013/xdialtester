@@ -51,23 +51,26 @@ public:
 
     // Inherited from EventListener class
     void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) override;
-	void registerRDKShellEvents(std::function<void(const std::string &, const DialParams &)> callback) override;
+	void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) override;
 
     void registerConnectStatusListener(std::function<void(bool)> callback)
     {
         m_connListener = callback;
     };
     void removeDialListener() override;
+    void removeRDKShellListener() override;
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
     bool registerXcastApps(std::string &appCallsigns);
+    bool getPluginState(const string &myapp, const string &state);
     bool setStandbyBehaviour();
     std::vector<string> & getActiveApplications(int timeout = REQUEST_TIMEOUT_IN_MS);
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state);
     bool launchPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool shutdownPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
+    bool suspendPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool sendDeepLinkRequest(const DialParams &dialParams);
 private:
     TransportHandler *mp_handler;

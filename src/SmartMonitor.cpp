@@ -19,6 +19,7 @@
 
 #include "SmartMonitor.h"
 #include "EventUtils.h"
+#include "thunder/ProtocolHandler.h"
 #include <csignal>
 #include <set>
 #include <thread>
