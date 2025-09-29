@@ -24,6 +24,10 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 
+// Global debug variables - default to false unless explicitly enabled
+bool debug = false;
+bool tdebug = false;
+
 static const char *VERSION = "1.0.6";
 
 #ifndef GIT_SHORT_SHA
@@ -32,21 +36,26 @@ static const char *VERSION = "1.0.6";
 
 /***
  * Main entry point for the application
- * Usage: xdialtester --enable-apps=app1,app2,app3
+ * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug]
  */
 int main(int argc, char *argv[])
 {
     LOGINFO("Smart Monitor: %s (%s)" , VERSION, GIT_SHORT_SHA);
     string appCallsigns = "YouTube,Netflix,Amazon";
     if (argc > 1) {
-	    string arg = argv[1];
-	    // parse command line --enable-apps=app1,app2,app3
-	    if (arg.find("--enable-apps=") != string::npos) {
-		    string apps = arg.substr(arg.find("=") + 1);
-			appCallsigns = apps;
-	    } else {
-		    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
-		    return -1;
+		for (int i = 1; i < argc; i++) {
+		    string arg = argv[i];
+		    if (arg.find("--enable-apps=") != string::npos) {
+			    string apps = arg.substr(arg.find("=") + 1);
+				appCallsigns = apps;
+		    } else if (arg == "--enable-debug") {
+			    debug = true;
+			    tdebug = true;
+			    LOGINFO("Debug mode enabled");
+		    } else {
+			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
+			    return -1;
+		    }
 		}
     }
 

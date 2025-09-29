@@ -26,7 +26,6 @@
 
 using namespace std;
 using std::string;
-bool debug = isDebugEnabled();
 
 SmartMonitor *SmartMonitor::_instance = nullptr;
 

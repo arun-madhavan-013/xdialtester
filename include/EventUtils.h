@@ -61,6 +61,7 @@ inline bool stringCompareIgnoreCase(const std::string &a, const std::string &b)
     return false;
 }
 extern bool debug;
+extern bool tdebug;
 bool isDebugEnabled();
 
 bool getMessageId(const string &jsonMsg, int &msgId);
