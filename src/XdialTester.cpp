@@ -24,9 +24,9 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 
-// Global debug variables - default to false unless explicitly enabled
-bool debug = false;
-bool tdebug = false;
+// Global debug variables - check environment variable or command line flag
+bool debug = (getenv("SMDEBUG") != NULL);
+bool tdebug = (getenv("SMDEBUG") != NULL);
 
 static const char *VERSION = "1.0.6";
 
