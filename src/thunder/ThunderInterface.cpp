@@ -366,8 +366,23 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
 
 bool ThunderInterface::reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state)
 {
-	// convert state to : running, stopped, hidden, suspended
-	if (state == "running" || state == "stopped" || state == "hidden" || state == "suspended")
+	if (appName.empty() || appId.empty() || state.empty()) {
+		return false;
+	}
+	// Possible plugin states are: Activated, Activation, Deactivated, Deactivation, Destroyed,
+	// Hibernated, Precondition, Resumed, Suspended, Unavailable
+	// convert to : running, stopped, hidden, suspended
+	if ((state == "deactivated") || (state == "deactivation") || (state == "destroyed")
+		|| (state == "unavailable") || (state == "activation") || (state == "precondition")) {
+		state = "stopped";
+	} else if ((state == "activated") || (state == "resumed")) {
+		state = "running";
+	} else if ((state == "suspended") || (state == "hibernated")) {
+		state = "suspended";
+	} else {
+		LOGWARN("Unknown state %s received from app %s, passing it as such.", state.c_str(), appName.c_str());
+	}
+	if ((state == "running") || (state == "stopped") || (state == "hidden") || (state == "suspended"))
 	{
 		return setAppState(appName, appId, state);
 	}
