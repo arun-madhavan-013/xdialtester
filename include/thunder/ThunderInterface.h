@@ -62,8 +62,8 @@ public:
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
-    bool registerXcastApps(std::string &appCallsigns);
-    bool getPluginState(const string &myapp, const string &state);
+    bool registerXcastApps(const std::string &appCallsigns);
+    bool getPluginState(const string &myapp, string &state);
     bool setStandbyBehaviour();
     std::vector<string> & getActiveApplications(int timeout = REQUEST_TIMEOUT_IN_MS);
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);

@@ -60,7 +60,7 @@ public:
   bool getConnectStatus();
   bool checkAndEnableCasting();
   bool registerDIALApps(const string &appCallsigns);
-  bool getPluginState(const string &myapp, const string &state);
+  bool getPluginState(const string &myapp, string &state);
   bool isAppRunning(const string &myapp);
   bool setStandbyBehaviour();
 

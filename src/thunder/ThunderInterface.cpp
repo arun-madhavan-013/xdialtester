@@ -140,7 +140,7 @@ bool ThunderInterface::getFriendlyName(std::string &name)
     return status;
 }
 
-bool ThunderInterface::getPluginState(const string &myapp, const string &state)
+bool ThunderInterface::getPluginState(const string &myapp, string &state)
 {
 	LOGTRACE("Getting plugin state.. ");
 	bool status = false;

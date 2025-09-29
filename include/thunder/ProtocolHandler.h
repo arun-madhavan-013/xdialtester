@@ -39,5 +39,6 @@ bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &val
 string getClientListToJson(int &id);
 string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
 string launchAppToJson(const string &appName, int &id);
+string suspendAppToJson(const string &appName, int &id);
 string shutdownAppToJson(const string &appName, int &id);
 string sendDeepLinkToJson(const DialParams &dialParams, int &id);

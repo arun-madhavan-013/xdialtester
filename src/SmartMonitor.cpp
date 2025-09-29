@@ -182,7 +182,7 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 	}
 }
 
-bool SmartMonitor::getPluginState(const string &myapp, const string &state)
+bool SmartMonitor::getPluginState(const string &myapp, string &state)
 {
 	return tiface->getPluginState(myapp, state);
 }
