@@ -56,6 +56,28 @@ ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nu
     mp_handler = new TransportHandler();
 
     const std::string configFilePath = "/opt/appConfig.json";
+	/* Sample appConfig.json format */
+	/*
+		{
+			"appConfig": [
+				{
+					"name": "YouTube",
+					"baseurl": "https://www.youtube.com/tv",
+					"deeplinkmethod": "Cobalt.1.deeplink"
+				},
+				{
+					"name": "Netflix",
+					"baseurl": "https://www.netflix.com",
+					"deeplinkmethod": "Netflix.1.systemcommand"
+				},
+				{
+					"name": "Amazon",
+					"baseurl": "https://www.amazon.com/gp/video",
+					"deeplinkmethod": "PrimeVideo.1.deeplink"
+				}
+			]
+		}
+	*/
 
     std::ifstream configFile(configFilePath);
     if (configFile.is_open())
