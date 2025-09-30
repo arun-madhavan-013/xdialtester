@@ -28,15 +28,20 @@
 #include "TransportHandler.h"
 #include "EventListener.h"
 
+// Structure to hold app configuration data
+struct AppConfig {
+    std::string name;
+    std::string baseurl;
+    std::string deeplinkmethod;
+};
 
+// Global app configuration list
+extern std::vector<AppConfig> g_appConfigList;
 
 class ThunderInterface : public EventListener
 {
 public:
-    ThunderInterface() : m_isInitialized(false), m_connListener(nullptr), mp_thThread(nullptr)
-    {
-        mp_handler = new TransportHandler();
-    }
+    ThunderInterface();
     int initialize();
 
     void setThunderConnectionURL(const std::string &wsurl);
@@ -72,6 +77,7 @@ public:
     bool shutdownPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool suspendPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool sendDeepLinkRequest(const DialParams &dialParams);
+
 private:
     TransportHandler *mp_handler;
     bool m_isInitialized;
@@ -80,7 +86,6 @@ private:
     std::function<void(bool)> m_connListener;
 
     std::thread *mp_thThread;
-    const std::string m_homeURL;
 
     void connected(bool connected);
     void onMsgReceived(const std::string message);

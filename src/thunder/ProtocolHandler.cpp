@@ -23,10 +23,14 @@
 #include "ProtocolHandler.h"
 #include "EventUtils.h"
 
-static int event_id = 1001;
-string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);
+// Forward declaration for ThunderInterface
+class ThunderInterface;
 
-void addVersion(Json::Value &root, int &id)
+// External reference to get app configurations from ThunderInterface
+extern std::vector<AppConfig> g_appConfigList;
+
+static int event_id = 1001;
+string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);void addVersion(Json::Value &root, int &id)
 {
     root["jsonrpc"] = "2.0";
     id = event_id;
@@ -448,14 +452,55 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
     Json::Value root;
     addVersion(root, id);
 
-    root["method"] = "Cobalt.1.deeplink";
+    // Find app configuration by name
+    string method;
+    string baseUrl;
+    bool found = false;
 
-    string url = "https://www.youtube.com/tv";
-    url.append("?").append(dialParams.strPayLoad);
-    url.append("&").append(dialParams.strQuery);
-    url.append("&").append(dialParams.strAddDataUrl);
+    for (const auto& appConfig : g_appConfigList) {
+        if (appConfig.name == dialParams.appName) {
+            method = appConfig.deeplinkmethod;
+            baseUrl = appConfig.baseurl;
+            found = true;
+            break;
+        }
+    }
 
-    Json::Value params;
+    if (!found) {
+        LOGERR("App configuration not found for %s", dialParams.appName.c_str());
+        return "";
+    }
+
+    if (method.empty()) {
+        LOGERR("Deeplink method not configured for app %s", dialParams.appName.c_str());
+        return "";
+    }
+
+    root["method"] = method;
+
+    // Build the complete URL with parameters
+    string url = baseUrl;
+    bool hasParams = false;
+
+    if (!dialParams.strPayLoad.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strPayLoad);
+        hasParams = true;
+    }
+
+    if (!dialParams.strQuery.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strQuery);
+        hasParams = true;
+    }
+
+    if (!dialParams.strAddDataUrl.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strAddDataUrl);
+        hasParams = true;
+    }
+
     root["params"] = url;
+
+    LOGINFO("Generated deeplink for %s: method=%s, url=%s",
+           dialParams.appName.c_str(), method.c_str(), url.c_str());
+
     return getStringFromJson(root);
 }

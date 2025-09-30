@@ -17,6 +17,10 @@
  * limitations under the License.
  */
 
+#include <memory>
+#include <sstream>
+#include <fstream>
+#include <iostream>
 #include "json/json.h"
 
 #include "ThunderInterface.h"
@@ -24,7 +28,8 @@
 #include "ResponseHandler.h"
 #include "EventUtils.h"
 
-// static bool debug = false;
+std::vector<AppConfig> g_appConfigList;
+
 void ThunderInterface::connected(bool connected)
 {
     LOGTRACE("Connection update .. %s", connected ? "true" : "false");
@@ -43,6 +48,83 @@ void ThunderInterface::onMsgReceived(const string message)
     else
     {
         evtHandler->addMessageToEventQueue(message);
+    }
+}
+
+ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nullptr), mp_thThread(nullptr)
+{
+    mp_handler = new TransportHandler();
+
+    const std::string configFilePath = "/opt/appConfig.json";
+
+    std::ifstream configFile(configFilePath);
+    if (configFile.is_open())
+    {
+        LOGINFO("Reading app configuration from %s", configFilePath.c_str());
+
+        std::stringstream buffer;
+        buffer << configFile.rdbuf();
+        configFile.close();
+
+        std::string jsonContent = buffer.str();
+
+        if (!jsonContent.empty())
+        {
+            Json::Value root;
+            if (parseJson(jsonContent, root))
+            {
+                if (root.isMember("appConfig") && root["appConfig"].isArray())
+                {
+                    Json::Value appConfigArray = root["appConfig"];
+
+                    for (const auto& appItem : appConfigArray)
+                    {
+                        if (appItem.isMember("name") && appItem.isMember("baseurl"))
+                        {
+                            AppConfig config;
+                            config.name = appItem["name"].asString();
+                            config.baseurl = appItem["baseurl"].asString();
+                            config.deeplinkmethod = appItem.get("deeplinkmethod", "").asString();
+                            g_appConfigList.push_back(config);
+
+                            LOGINFO("Loaded app config: %s -> %s (method: %s)",
+                                   config.name.c_str(), config.baseurl.c_str(), config.deeplinkmethod.c_str());
+                        }
+                        else
+                        {
+                            LOGWARN("Invalid app config entry - missing name or baseurl field");
+                        }
+                    }
+                    LOGINFO("Successfully loaded %zu app configurations", g_appConfigList.size());
+                }
+                else
+                {
+                    LOGWARN("App config file does not contain valid 'appConfig' array");
+                }
+            }
+            else
+            {
+                LOGERR("Failed to parse app config JSON file: %s", configFilePath.c_str());
+            }
+        }
+        else
+        {
+            LOGWARN("App config file is empty: %s", configFilePath.c_str());
+        }
+    }
+    else
+    {
+        LOGINFO("App config file not found: %s - using default configuration", configFilePath.c_str());
+
+        AppConfig youtube = {"YouTube", "https://www.youtube.com/tv", "Cobalt.1.deeplink"};
+        AppConfig netflix = {"Netflix", "https://www.netflix.com", "Netflix.1.deeplink"};
+        AppConfig amazon = {"Amazon", "https://www.amazon.com/gp/video", "PrimeVideo.1.deeplink"};
+
+        g_appConfigList.push_back(youtube);
+        g_appConfigList.push_back(netflix);
+        g_appConfigList.push_back(amazon);
+
+        LOGINFO("Loaded default app configurations");
     }
 }
 
@@ -465,7 +547,6 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
 {
     int id = 0;
     bool status = false;
-    std::string callsign = (dialParams.appName == "YouTube") ? "Cobalt" : dialParams.appName;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     string jsonmsg = sendDeepLinkToJson(dialParams, id);
     LOGINFO(" Deep link request API : %s", jsonmsg.c_str());
