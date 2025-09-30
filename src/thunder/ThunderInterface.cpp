@@ -486,7 +486,7 @@ bool ThunderInterface::reportDIALAppState(const std::string &appName, const std:
 	} else if ((convertedState == "suspended") || (convertedState == "hibernated")) {
 		convertedState = "suspended";
 	} else {
-		LOGWARN("Unknown state %s received from app %s, passing it as such.", convertedState.c_str(), appName.c_str());
+		LOGINFO("Unknown state %s received from app %s, passing it as such.", convertedState.c_str(), appName.c_str());
 	}
 	if ((convertedState == "running") || (convertedState == "stopped") || (convertedState == "hidden") || (convertedState == "suspended"))
 	{

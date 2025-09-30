@@ -182,8 +182,8 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 		return;
 	}
 	if (!convertPluginStateToDIALState(state, dialState)) {
-		LOGERR("Failed to convert plugin state %s to DIAL state, set as STOPPED", state.c_str());
-		dialState = "stopped";
+		LOGERR("Failed to convert plugin state %s to DIAL state, set as UNKNOWN", state.c_str());
+		dialState = "unknown";
 	}
 
 	if (APP_STATE_REQUEST_EVENT == dialEvent) {
