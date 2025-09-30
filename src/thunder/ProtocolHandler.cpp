@@ -452,15 +452,14 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
     Json::Value root;
     addVersion(root, id);
 
-    // Find app configuration by name
     string method;
-    string baseUrl;
+    string url;
     bool found = false;
 
     for (const auto& appConfig : g_appConfigList) {
         if (appConfig.name == dialParams.appName) {
             method = appConfig.deeplinkmethod;
-            baseUrl = appConfig.baseurl;
+            url = appConfig.baseurl;
             found = true;
             break;
         }
@@ -478,9 +477,8 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
 
     root["method"] = method;
 
-    // Build the complete URL with parameters
-    string url = baseUrl;
-    bool hasParams = false;
+    // Check if base URL already has parameters
+    bool hasParams = (url.find('?') != string::npos);
 
     if (!dialParams.strPayLoad.empty()) {
         url.append(hasParams ? "&" : "?").append(dialParams.strPayLoad);

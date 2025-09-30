@@ -27,16 +27,7 @@
 #include "EventUtils.h"
 #include "TransportHandler.h"
 #include "EventListener.h"
-
-// Structure to hold app configuration data
-struct AppConfig {
-    std::string name;
-    std::string baseurl;
-    std::string deeplinkmethod;
-};
-
-// Global app configuration list
-extern std::vector<AppConfig> g_appConfigList;
+#include "ProtocolHandler.h"  // Include for AppConfig definition
 
 class ThunderInterface : public EventListener
 {

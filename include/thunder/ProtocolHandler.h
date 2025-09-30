@@ -19,10 +19,21 @@
 
 #pragma once
 #include <string>
+#include <vector>
 using namespace std;
 
 #include "EventListener.h"
+#include "json/json.h"
 
+// Structure to hold app configuration data
+struct AppConfig {
+    std::string name;
+    std::string baseurl;
+    std::string deeplinkmethod;
+};
+
+// Global app configuration list
+extern std::vector<AppConfig> g_appConfigList;
 
 string getSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
@@ -32,6 +43,7 @@ string getRegisterAppToJson(int &id, const string &appCallsigns);
 string getThunderMethodToJson(const string &method, int &id);
 string isCastingEnabledToJson(int &);
 string setStandbyBehaviourToJson(int &id);
+bool parseJson(const string &jsonMsg, Json::Value &root);
 bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
 bool convertResultStringToBool(const string &root, bool &);
 bool convertEventSubResponseToInt(const string &root, int &);
