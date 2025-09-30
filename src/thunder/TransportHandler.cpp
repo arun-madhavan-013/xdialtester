@@ -18,13 +18,13 @@
  */
 
 #include "TransportHandler.h"
+#include "EventUtils.h"
 #include <thread>
 
 #include <iostream>
 using std::cout;
 using std::endl;
 
-bool tdebug = false;
 int TransportHandler::initializeTransport()
 {
 

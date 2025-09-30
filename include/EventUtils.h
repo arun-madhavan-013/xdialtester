@@ -61,6 +61,7 @@ inline bool stringCompareIgnoreCase(const std::string &a, const std::string &b)
     return false;
 }
 extern bool debug;
+extern bool tdebug;
 bool isDebugEnabled();
 
 bool getMessageId(const string &jsonMsg, int &msgId);
@@ -71,9 +72,19 @@ bool getParamFromResult(const string &jsonMsg, const string & param, string &val
 
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 
-//#define LOGTRACE(fmt, ...) do { fprintf(stderr, "TRACE [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-#define LOGTRACE(fmt, ...) 
+// ANSI Color codes for logging
+#define COLOR_RESET   "\033[0m"
+#define COLOR_RED     "\033[31m"
+#define COLOR_ORANGE  "\033[33m"
+#define COLOR_WHITE   "\033[37m"
+#define COLOR_GREEN   "\033[32m"
 
-#define LOGINFO(fmt, ...) do { fprintf(stderr, "INFO [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-#define LOGWARN(fmt, ...) do { fprintf(stderr, "WARN [%s:%d] %s: " fmt "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-#define LOGERR(fmt, ...) do { fprintf(stderr, "ERROR [%s:%d] %s: " fmt "\n",  __FILENAME__ , __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+#ifdef ENABLE_TRACELOGS
+#define LOGTRACE(fmt, ...) do { fprintf(stderr, COLOR_GREEN "TRACE [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+#else
+#define LOGTRACE(fmt, ...) do { } while (0)
+#endif
+
+#define LOGINFO(fmt, ...) do { fprintf(stderr, COLOR_WHITE "INFO [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+#define LOGWARN(fmt, ...) do { fprintf(stderr, COLOR_ORANGE "WARN [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
+#define LOGERR(fmt, ...) do { fprintf(stderr, COLOR_RED "ERROR [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__ , __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)

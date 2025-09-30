@@ -19,12 +19,13 @@
 
 #include "SmartMonitor.h"
 #include "EventUtils.h"
+#include "thunder/ProtocolHandler.h"
 #include <csignal>
+#include <set>
 #include <thread>
 
 using namespace std;
 using std::string;
-bool debug = isDebugEnabled();
 
 SmartMonitor *SmartMonitor::_instance = nullptr;
 
@@ -50,7 +51,7 @@ void SmartMonitor::waitForTermSignal()
         unique_lock<std::mutex> ulock(m_lock);
         m_act_cv.wait(ulock);
     }
-    
+
     LOGTRACE("[SmartMonitor::waitForTermSignal] Received term signal."); });
     termThread.join();
 }
@@ -104,42 +105,94 @@ void SmartMonitor::connectToThunder()
 void SmartMonitor::registerForEvents()
 {
     LOGTRACE("Enter.. ");
-    tiface->registerDialRequests([&, this](DIALEVENTS dialEvent,const DialParams & dialParams)
+    tiface->registerDialRequests([&, this](DIALEVENTS dialEvent, const DialParams & dialParams)
                                  { onDialEvent(dialEvent, dialParams); });
+    tiface->registerRDKShellEvents([&, this](const std::string &event, const std::string &params)
+								 { onRDKShellEvent(event, params); });
+}
+
+void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &params)
+{
+	LOGINFO("Received RDKShell Event: %s with params: %s", event.c_str(), params.c_str());
+
+	std::string actualEvent = event;
+	size_t dotPos = event.find('.');
+	if (dotPos != std::string::npos) {
+		actualEvent = event.substr(dotPos + 1);
+	}
+
+	// Check if event is any of these
+	static const std::set<std::string> validEvents = {
+		"onApplicationActivated",
+		"onApplicationLaunched",
+		"onApplicationResumed",
+		"onApplicationSuspended",
+		"onApplicationTerminated",
+		"onDestroyed",
+		"onLaunched",
+		"onSuspended",
+		"onPluginSuspended"
+	};
+
+	if (validEvents.find(actualEvent) != validEvents.end()) {
+		LOGINFO("Event %s is a valid RDKShell event.", actualEvent.c_str());
+		if (actualEvent == "onApplicationLaunched") {
+			std::string state = "stopped";
+			// params has the following format: "params": {"client": "org.rdk.Netflix"}
+			// extract client value as appName and set appId as empty string
+			std::string appName;
+			if (!getValueOfKeyFromJson(params, "client", appName)) {
+				LOGERR("Failed to extract client from params: %s", params.c_str());
+				return;
+			}
+			if (getPluginState(appName, state)) {
+
+				tiface->reportDIALAppState(appName, "", state);
+			}
+		}
+	} else {
+		LOGINFO("Event %s is not a monitored RDKShell event.", actualEvent.c_str());
+	}
 }
 
 void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-    LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent, dialParams.appName.c_str(), dialParams.appId.c_str());
-    bool running = isAppRunning(dialParams.appName);
-    if (APP_STATE_REQUEST_EVENT == dialEvent)
-    {
-        tiface->setAppState(dialParams.appName, dialParams.appId, running ? "running" : "stopped");
-    }
-    else if (APP_LAUNCH_REQUEST_EVENT == dialEvent)
-    {
-        if (!running)
-            tiface->launchPremiumApp(dialParams.appName);
-        tiface->sendDeepLinkRequest(dialParams);
-        tiface->setAppState(dialParams.appName, dialParams.appId, "running");
-    }
-    else if (APP_HIDE_REQUEST_EVENT == dialEvent || APP_RESUME_REQUEST_EVENT == dialEvent)
-    {
-        LOGINFO("Ignoring event %d for app %s", dialEvent, dialParams.appName.c_str());
-    }
-    else if (APP_STOP_REQUEST_EVENT == dialEvent)
-    {
-        if (running)
-            tiface->shutdownPremiumApp(dialParams.appName);
-            tiface->setAppState(dialParams.appName, dialParams.appId, "stopped");
+	LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent,
+	        dialParams.appName.c_str(), dialParams.appId.c_str());
 
-    }
-    
-    else
-    {
-        LOGERR("Unknown event %d", dialEvent);
-    }
+	bool running = isAppRunning(dialParams.appName);
+	if (APP_STATE_REQUEST_EVENT == dialEvent) {
+		std::string state = "stopped";
+		if (getPluginState(dialParams.appName, state)) {
+			tiface->reportDIALAppState(dialParams.appName, dialParams.appId, state);
+		}
+	} else if (APP_LAUNCH_REQUEST_EVENT == dialEvent) {
+		if (!running) tiface->launchPremiumApp(dialParams.appName);
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		tiface->sendDeepLinkRequest(dialParams);
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "running");
+	} else if (APP_HIDE_REQUEST_EVENT == dialEvent ||
+	           APP_RESUME_REQUEST_EVENT == dialEvent) {
+		if (!tiface->suspendPremiumApp(dialParams.appName)) {
+			LOGERR("Failed to suspend app %s", dialParams.appName.c_str());
+		}
+		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "hidden");
+	} else if (APP_STOP_REQUEST_EVENT == dialEvent) {
+		if (running) tiface->shutdownPremiumApp(dialParams.appName);
+		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "stopped");
+	}
+
+	else {
+		LOGERR("Unknown event %d", dialEvent);
+	}
 }
+
+bool SmartMonitor::getPluginState(const string &myapp, string &state)
+{
+	return tiface->getPluginState(myapp, state);
+}
+
 bool SmartMonitor::isAppRunning(const string &myapp)
 {
     std::string callsign = (myapp == "YouTube") ? "Cobalt" : myapp;
@@ -173,12 +226,13 @@ bool SmartMonitor::checkAndEnableCasting()
     LOGTRACE("Friendly name is .. %s", result.c_str());
     return status;
 }
-bool SmartMonitor::registerYoutube()
+
+bool SmartMonitor::registerDIALApps(const string &appCallsigns)
 {
-    LOGTRACE("Enabling youtube casting.. ");
+    LOGTRACE("Enabling Apps for DIAL casting.. ");
     bool status = false;
     string result;
-    return tiface->enableYoutubeCasting();
+    return tiface->registerXcastApps(appCallsigns);
 }
 
 bool SmartMonitor::getConnectStatus()
@@ -186,6 +240,7 @@ bool SmartMonitor::getConnectStatus()
     LOGTRACE("Connect status is %s.. ", isConnected ? "true" : "false");
     return isConnected;
 }
+
 bool SmartMonitor::setStandbyBehaviour()
 {
     LOGTRACE("Enabling standby behaviour as active.. ");

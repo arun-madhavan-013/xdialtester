@@ -23,10 +23,14 @@
 #include "ProtocolHandler.h"
 #include "EventUtils.h"
 
-static int event_id = 1001;
-string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);
+// Forward declaration for ThunderInterface
+class ThunderInterface;
 
-void addVersion(Json::Value &root, int &id)
+// External reference to get app configurations from ThunderInterface
+extern std::vector<AppConfig> g_appConfigList;
+
+static int event_id = 1001;
+string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);void addVersion(Json::Value &root, int &id)
 {
     root["jsonrpc"] = "2.0";
     id = event_id;
@@ -54,7 +58,7 @@ string getThunderMethodToJson(const string &method, int &id)
     return getStringFromJson(root);
 }
 
-string getYoutubeRegisterToJson(int &id)
+string getRegisterAppToJson(int &id, const string &appCallsigns)
 {
     Json::Value root;
     addVersion(root, id);
@@ -64,30 +68,61 @@ string getYoutubeRegisterToJson(int &id)
     Json::Value params;
     Json::Value applications(Json::arrayValue);
 
-    Json::Value app1;
-    app1["name"] = "YouTube";
-    app1["prefix"] = "myYoutube";
-    Json::Value cors(Json::arrayValue);
-    cors.append(".youtube.com");
-    app1["cors"] = cors;
-    Json::Value properties;
-    properties["allowStop"] = false;
-    app1["properties"] = properties;
+	if (appCallsigns.find("YouTube") != string::npos) {
+		// hardcoding youtube app details for now
+		Json::Value app1;
+		app1["name"] = "YouTube";
+		app1["prefix"] = "myYoutube";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".youtube.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
 
-    applications.append(app1);
+		applications.append(app1);
 
-    Json::Value app2;
+		Json::Value app2;
+		app2["name"] = "YouTubeTV";
+		app2["prefix"] = "myYouTubeTV";
+		Json::Value cors2(Json::arrayValue);
+		cors2.append(".youtube.com");
+		app2["cors"] = cors2;
+		Json::Value properties2;
+		properties2["allowStop"] = true;
+		app2["properties"] = properties2;
 
-    app2["name"] = "YouTubeTV";
-    app2["prefix"] = "myYouTubeTV";
-    Json::Value cors2(Json::arrayValue);
-    cors2.append(".youtube.com");
-    app2["cors"] = cors2;
-    Json::Value properties2;
-    properties2["allowStop"] = false;
-    app2["properties"] = properties2;
+		applications.append(app2);
+	}
+	if (appCallsigns.find("Netflix") != string::npos) {
+		// hardcoding netflix app details for now
+		Json::Value app1;
+		app1["name"] = "Netflix";
+		app1["prefix"] = "myNetflix";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".netflix.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
 
-    applications.append(app2);
+		applications.append(app1);
+	}
+
+	if (appCallsigns.find("Amazon") != string::npos) {
+		// hardcoding amazon app details for now
+		Json::Value app1;
+		app1["name"] = "AmazonInstantVideo";
+		app1["prefix"] = "myPrimeVideo";
+		Json::Value cors(Json::arrayValue);
+		cors.append(".amazon.com");
+		app1["cors"] = cors;
+		Json::Value properties;
+		properties["allowStop"] = true;
+		app1["properties"] = properties;
+
+		applications.append(app1);
+	}
 
     params["applications"] = applications;
 
@@ -166,6 +201,12 @@ string getClientListToJson(int &id)
 
 bool parseJson(const string &jsonMsg, Json::Value &root)
 {
+    // Check for empty JSON message
+    if (jsonMsg.empty()) {
+        LOGERR("Cannot parse empty JSON message");
+        return false;
+    }
+
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
     std::string errs;
@@ -307,6 +348,21 @@ bool getDialEventParams(const string &jsonMsg, DialParams &params)
     return status;
 }
 
+bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value)
+{
+	bool status = false;
+	Json::Value root;
+	if (parseJson(jsonMsg, root))
+	{
+		if (!root[key].isNull())
+		{
+			value = root[key].asString();
+			status = true;
+		}
+	}
+	return status;
+}
+
 bool getParamFromResult(const string &jsonMsg, const string &param, string &value)
 {
     bool status = false;
@@ -368,6 +424,18 @@ string setStandbyBehaviourToJson(int &id)
 
     return getStringFromJson(root);
 }
+
+string suspendAppToJson(const string &appName, int &id)
+{
+    Json::Value root;
+    addVersion(root, id);
+
+    root["method"] = "org.rdk.RDKShell.1.suspend";
+    root["params"]["callsign"] = appName;
+
+    return getStringFromJson(root);
+}
+
 string shutdownAppToJson(const string &appName, int &id)
 {
     Json::Value root;
@@ -384,14 +452,58 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
     Json::Value root;
     addVersion(root, id);
 
-    root["method"] = "Cobalt.1.deeplink";
+    string method;
+    string url;
+    bool found = false;
+    string netflixIIDInfo = "source_type=12&iid=99a5fb82";
 
-    string url = "https://www.youtube.com/tv";
-    url.append("?").append(dialParams.strPayLoad);
-    url.append("&").append(dialParams.strQuery);
-    url.append("&").append(dialParams.strAddDataUrl);
+    for (const auto& appConfig : g_appConfigList) {
+        if (appConfig.name == dialParams.appName) {
+            method = appConfig.deeplinkmethod;
+            url = appConfig.baseurl;
+            found = true;
+            break;
+        }
+    }
 
-    Json::Value params;
+    if (!found) {
+        LOGERR("App configuration not found for %s", dialParams.appName.c_str());
+        return "";
+    }
+
+    if (method.empty()) {
+        LOGERR("Deeplink method not configured for app %s", dialParams.appName.c_str());
+        return "";
+    }
+
+    root["method"] = method;
+
+    // Check if base URL already has parameters
+    bool hasParams = (url.find('?') != string::npos);
+
+    if (!dialParams.strPayLoad.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strPayLoad);
+        hasParams = true;
+    }
+
+    if (!dialParams.strQuery.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strQuery);
+        hasParams = true;
+    }
+
+    if (!dialParams.strAddDataUrl.empty()) {
+        url.append(hasParams ? "&" : "?").append(dialParams.strAddDataUrl);
+        hasParams = true;
+    }
+
+    if (dialParams.appName == "Netflix") {
+        url.append(hasParams ? "&" : "?").append(netflixIIDInfo);
+    }
+
     root["params"] = url;
+
+    LOGINFO("Generated deeplink for %s: method=%s, url=%s",
+           dialParams.appName.c_str(), method.c_str(), url.c_str());
+
     return getStringFromJson(root);
 }

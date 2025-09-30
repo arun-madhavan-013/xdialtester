@@ -17,6 +17,10 @@
  * limitations under the License.
  */
 
+#include <memory>
+#include <sstream>
+#include <fstream>
+#include <iostream>
 #include "json/json.h"
 
 #include "ThunderInterface.h"
@@ -24,7 +28,8 @@
 #include "ResponseHandler.h"
 #include "EventUtils.h"
 
-// static bool debug = false;
+std::vector<AppConfig> g_appConfigList;
+
 void ThunderInterface::connected(bool connected)
 {
     LOGTRACE("Connection update .. %s", connected ? "true" : "false");
@@ -43,6 +48,105 @@ void ThunderInterface::onMsgReceived(const string message)
     else
     {
         evtHandler->addMessageToEventQueue(message);
+    }
+}
+
+ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nullptr), mp_thThread(nullptr)
+{
+    mp_handler = new TransportHandler();
+
+    const std::string configFilePath = "/opt/appConfig.json";
+	/* Sample appConfig.json format */
+	/*
+		{
+			"appConfig": [
+				{
+					"name": "YouTube",
+					"baseurl": "https://www.youtube.com/tv",
+					"deeplinkmethod": "Cobalt.1.deeplink"
+				},
+				{
+					"name": "Netflix",
+					"baseurl": "https://www.netflix.com",
+					"deeplinkmethod": "Netflix.1.systemcommand"
+				},
+				{
+					"name": "Amazon",
+					"baseurl": "https://www.amazon.com/gp/video",
+					"deeplinkmethod": "PrimeVideo.1.deeplink"
+				}
+			]
+		}
+	*/
+
+    std::ifstream configFile(configFilePath);
+    if (configFile.is_open())
+    {
+        LOGINFO("Reading app configuration from %s", configFilePath.c_str());
+
+        std::stringstream buffer;
+        buffer << configFile.rdbuf();
+        configFile.close();
+
+        std::string jsonContent = buffer.str();
+
+        if (!jsonContent.empty())
+        {
+            Json::Value root;
+            if (parseJson(jsonContent, root))
+            {
+                if (root.isMember("appConfig") && root["appConfig"].isArray())
+                {
+                    Json::Value appConfigArray = root["appConfig"];
+
+                    for (const auto& appItem : appConfigArray)
+                    {
+                        if (appItem.isMember("name") && appItem.isMember("baseurl"))
+                        {
+                            AppConfig config;
+                            config.name = appItem["name"].asString();
+                            config.baseurl = appItem["baseurl"].asString();
+                            config.deeplinkmethod = appItem.get("deeplinkmethod", "").asString();
+                            g_appConfigList.push_back(config);
+
+                            LOGINFO("Loaded app config: %s -> %s (method: %s)",
+                                   config.name.c_str(), config.baseurl.c_str(), config.deeplinkmethod.c_str());
+                        }
+                        else
+                        {
+                            LOGWARN("Invalid app config entry - missing name or baseurl field");
+                        }
+                    }
+                    LOGINFO("Successfully loaded %zu app configurations", g_appConfigList.size());
+                }
+                else
+                {
+                    LOGWARN("App config file does not contain valid 'appConfig' array");
+                }
+            }
+            else
+            {
+                LOGERR("Failed to parse app config JSON file: %s", configFilePath.c_str());
+            }
+        }
+        else
+        {
+            LOGWARN("App config file is empty: %s", configFilePath.c_str());
+        }
+    }
+    else
+    {
+        LOGINFO("App config file not found: %s - using default configuration", configFilePath.c_str());
+
+        AppConfig youtube = {"YouTube", "https://www.youtube.com/tv", "Cobalt.1.deeplink"};
+        AppConfig netflix = {"Netflix", "https://www.netflix.com", "Netflix.1.systemcommand"};
+        AppConfig amazon = {"Amazon", "https://www.amazon.com/gp/video", "PrimeVideo.1.deeplink"};
+
+        g_appConfigList.push_back(youtube);
+        g_appConfigList.push_back(netflix);
+        g_appConfigList.push_back(amazon);
+
+        LOGINFO("Loaded default app configurations");
     }
 }
 
@@ -139,15 +243,54 @@ bool ThunderInterface::getFriendlyName(std::string &name)
     }
     return status;
 }
-bool ThunderInterface::enableYoutubeCasting()
+
+bool ThunderInterface::getPluginState(const string &myapp, string &state)
 {
-    LOGTRACE("Enabling youtube casting.. ");
+	LOGTRACE("Getting plugin state.. ");
+	bool status = false;
+	int msgId = 0;
+
+	ResponseHandler *evtHandler = ResponseHandler::getInstance();
+	std::string jsonmsg = getThunderMethodToJson("Controller.1.status@" + (myapp == "YouTube" ? "Cobalt" : myapp), msgId);
+
+	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+	{
+		string response = evtHandler->getRequestStatus(msgId);
+
+		Json::Value root;
+		Json::CharReaderBuilder builder;
+		std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+		std::string errs;
+
+		if (reader->parse(response.c_str(), response.c_str() + response.size(), &root, &errs)) {
+			if (root.isMember("result") && root["result"].isArray() && root["result"].size() > 0) {
+				for (const auto& element : root["result"]) {
+					if (element.isMember("callsign") && element["callsign"].asString() == (myapp == "YouTube" ? "Cobalt" : myapp)) {
+						if (element.isMember("state")) {
+							state = element["state"].asString();
+							status = true;
+							LOGINFO(" Plugin state for %s is %s", myapp.c_str(), state.c_str());
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			LOGERR("Failed to parse JSON response: %s", errs.c_str());
+		}
+	}
+	return status;
+}
+
+bool ThunderInterface::registerXcastApps(const string &appCallsigns)
+{
+    LOGTRACE("%s", __func__);
     bool status = false;
     int msgId = 0;
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
-    std::string jsonmsg = getYoutubeRegisterToJson( msgId);
-    LOGINFO(" RRegistering Youtube  : %s", jsonmsg.c_str());
+    std::string jsonmsg = getRegisterAppToJson(msgId, appCallsigns);
+    LOGINFO(" Registering Apps  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId);
@@ -205,6 +348,22 @@ void ThunderInterface::registerEvent(const std::string &event, bool isbinding)
 
     LOGINFO(" Event %s, response  %d ", event.c_str(), status);
 }
+
+void ThunderInterface::registerEvent(const std::string &callsignWithVersion, const std::string &event, bool isbinding)
+{
+	int msgId = 0;
+	bool status = false;
+
+	std::string jsonmsg;
+	if (isbinding)
+		jsonmsg = getSubscribeRequest(callsignWithVersion, event, msgId);
+	else
+		jsonmsg = getUnSubscribeRequest(callsignWithVersion, event, msgId);
+	status = sendMessage(jsonmsg, msgId);
+
+	LOGINFO(" Event %s, response  %d ", event.c_str(), status);
+}
+
 /**
  *
  * Implementation of event handlers
@@ -215,6 +374,43 @@ void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dial
     LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
         m_dialListener(dialEvent, dialParams);
+}
+
+void ThunderInterface::onRDKShellEvents(const std::string &event, const std::string &params)
+{
+	LOGINFO(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	if (nullptr != m_rdkShellListener)
+		m_rdkShellListener(event, params);
+}
+
+void ThunderInterface::removeRDKShellListener()
+{
+    m_rdkShellListener = nullptr;
+
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", false);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", false);
+    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", false);
+    registerEvent("org.rdk.RDKShell.1.", "onLaunched", false);
+    registerEvent("org.rdk.RDKShell.1.", "onSuspended", false);
+    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", false);
+}
+
+void ThunderInterface::registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback)
+{
+    m_rdkShellListener = callback;
+
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationActivated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationResumed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onApplicationTerminated", true);
+    registerEvent("org.rdk.RDKShell.1.", "onDestroyed", true);
+    registerEvent("org.rdk.RDKShell.1.", "onLaunched", true);
+    registerEvent("org.rdk.RDKShell.1.", "onSuspended", true);
+    registerEvent("org.rdk.RDKShell.1.", "onPluginSuspended", true);
 }
 
 void ThunderInterface::registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback)
@@ -239,6 +435,7 @@ void ThunderInterface::removeDialListener()
     registerEvent("onApplicationStateRequest", false);
     registerEvent("onApplicationStopRequest", false);
 }
+
 std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 {
     int id = 0;
@@ -254,6 +451,7 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
     }
     return m_appList;
 }
+
 bool ThunderInterface::setAppState(const std::string &appName, const std::string &appId, const std::string &state, int timeout)
 {
     int id = 0;
@@ -269,6 +467,38 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
     }
     return status;
 }
+
+bool ThunderInterface::reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state)
+{
+	if (appName.empty() || state.empty()) {
+		return false;
+	}
+
+	std::string convertedState = state;
+	// Possible plugin states are: Activated, Activation, Deactivated, Deactivation, Destroyed,
+	// Hibernated, Precondition, Resumed, Suspended, Unavailable
+	// convert to : running, stopped, hidden, suspended
+	if ((convertedState == "deactivated") || (convertedState == "deactivation") || (convertedState == "destroyed")
+		|| (convertedState == "unavailable") || (convertedState == "activation") || (convertedState == "precondition")) {
+		convertedState = "stopped";
+	} else if ((convertedState == "activated") || (convertedState == "resumed")) {
+		convertedState = "running";
+	} else if ((convertedState == "suspended") || (convertedState == "hibernated")) {
+		convertedState = "suspended";
+	} else {
+		LOGWARN("Unknown state %s received from app %s, passing it as such.", convertedState.c_str(), appName.c_str());
+	}
+	if ((convertedState == "running") || (convertedState == "stopped") || (convertedState == "hidden") || (convertedState == "suspended"))
+	{
+		return setAppState(appName, appId, convertedState);
+	}
+	else
+	{
+		LOGERR("Invalid state %s", convertedState.c_str());
+		return false;
+	}
+}
+
 bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
 {
     int id = 0;
@@ -301,6 +531,24 @@ bool ThunderInterface::setStandbyBehaviour()
     }
     return status;
 }
+
+bool ThunderInterface::suspendPremiumApp(const std::string &appName, int timeout)
+{
+    int id = 0;
+    bool status = false;
+    std::string callsign = (appName == "YouTube") ? "Cobalt" : appName;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    string jsonmsg = suspendAppToJson(callsign, id);
+    LOGINFO(" Suspend request API : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(id);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+
 bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeout)
 {
     int id = 0;
@@ -321,7 +569,6 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
 {
     int id = 0;
     bool status = false;
-    std::string callsign = (dialParams.appName == "YouTube") ? "Cobalt" : dialParams.appName;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     string jsonmsg = sendDeepLinkToJson(dialParams, id);
     LOGINFO(" Deep link request API : %s", jsonmsg.c_str());
@@ -333,4 +580,3 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
     }
     return status;
 }
-
