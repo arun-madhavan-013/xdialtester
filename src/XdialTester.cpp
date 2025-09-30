@@ -28,7 +28,7 @@
 bool debug = (getenv("SMDEBUG") != NULL);
 bool tdebug = (getenv("SMDEBUG") != NULL);
 
-static const char *VERSION = "1.0.6";
+static const char *VERSION = "1.1.1";
 
 #ifndef GIT_SHORT_SHA
 #define GIT_SHORT_SHA "unknown"
