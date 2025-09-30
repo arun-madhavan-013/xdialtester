@@ -61,6 +61,7 @@ public:
   bool checkAndEnableCasting();
   bool registerDIALApps(const string &appCallsigns);
   bool getPluginState(const string &myapp, string &state);
+  bool convertPluginStateToDIALState(const std::string &pluginState, std::string &dialState);
   bool isAppRunning(const string &myapp);
   bool setStandbyBehaviour();
 
