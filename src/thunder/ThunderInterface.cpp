@@ -117,7 +117,7 @@ ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nu
         LOGINFO("App config file not found: %s - using default configuration", configFilePath.c_str());
 
         AppConfig youtube = {"YouTube", "https://www.youtube.com/tv", "Cobalt.1.deeplink"};
-        AppConfig netflix = {"Netflix", "https://www.netflix.com", "Netflix.1.deeplink"};
+        AppConfig netflix = {"Netflix", "https://www.netflix.com", "Netflix.1.systemcommand"};
         AppConfig amazon = {"Amazon", "https://www.amazon.com/gp/video", "PrimeVideo.1.deeplink"};
 
         g_appConfigList.push_back(youtube);

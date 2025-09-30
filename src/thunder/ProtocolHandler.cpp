@@ -455,6 +455,7 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
     string method;
     string url;
     bool found = false;
+    string netflixIIDInfo = "source_type=12&iid=99a5fb82";
 
     for (const auto& appConfig : g_appConfigList) {
         if (appConfig.name == dialParams.appName) {
@@ -493,6 +494,10 @@ string sendDeepLinkToJson(const DialParams &dialParams, int &id)
     if (!dialParams.strAddDataUrl.empty()) {
         url.append(hasParams ? "&" : "?").append(dialParams.strAddDataUrl);
         hasParams = true;
+    }
+
+    if (dialParams.appName == "Netflix") {
+        url.append(hasParams ? "&" : "?").append(netflixIIDInfo);
     }
 
     root["params"] = url;
