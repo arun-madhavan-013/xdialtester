@@ -146,7 +146,6 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 				return;
 			}
 			if (getPluginState(appName, state)) {
-
 				tiface->reportDIALAppState(appName, "", state);
 			}
 		}
@@ -155,35 +154,87 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 	}
 }
 
+bool SmartMonitor::convertPluginStateToDIALState(const std::string &pluginState, std::string &dialState)
+{
+    bool status = true;
+	if ((pluginState == "deactivated") || (pluginState == "deactivation") || (pluginState == "destroyed")
+		|| (pluginState == "unavailable") || (pluginState == "activation") || (pluginState == "precondition")) {
+		dialState = "stopped";
+	} else if ((pluginState == "activated") || (pluginState == "resumed")) {
+		dialState = "running";
+	} else if ((pluginState == "suspended") || (pluginState == "hibernated")) {
+		dialState = "suspended";
+	} else {
+		LOGWARN("Unknown plugin state %s received.", pluginState.c_str());
+		status = false;
+	}
+	return status;
+}
+
 void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
 	LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent,
-	        dialParams.appName.c_str(), dialParams.appId.c_str());
+			dialParams.appName.c_str(), dialParams.appId.c_str());
 
-	bool running = isAppRunning(dialParams.appName);
-	if (APP_STATE_REQUEST_EVENT == dialEvent) {
-		std::string state = "stopped";
-		if (getPluginState(dialParams.appName, state)) {
-			tiface->reportDIALAppState(dialParams.appName, dialParams.appId, state);
-		}
-	} else if (APP_LAUNCH_REQUEST_EVENT == dialEvent) {
-		if (!running) tiface->launchPremiumApp(dialParams.appName);
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		tiface->sendDeepLinkRequest(dialParams);
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "running");
-	} else if (APP_HIDE_REQUEST_EVENT == dialEvent ||
-	           APP_RESUME_REQUEST_EVENT == dialEvent) {
-		if (!tiface->suspendPremiumApp(dialParams.appName)) {
-			LOGERR("Failed to suspend app %s", dialParams.appName.c_str());
-		}
-		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "hidden");
-	} else if (APP_STOP_REQUEST_EVENT == dialEvent) {
-		if (running) tiface->shutdownPremiumApp(dialParams.appName);
-		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, "stopped");
+	std::string state = "unknown", dialState = "unknown";
+	if (!getPluginState(dialParams.appName, state)) {
+		LOGERR("Failed to get plugin state for app %s", dialParams.appName.c_str());
+		return;
+	}
+	if (!convertPluginStateToDIALState(state, dialState)) {
+		LOGERR("Failed to convert plugin state %s to DIAL state, set as STOPPED", state.c_str());
+		dialState = "stopped";
 	}
 
-	else {
+	if (APP_STATE_REQUEST_EVENT == dialEvent) {
+		tiface->reportDIALAppState(dialParams.appName, dialParams.appId, dialState);
+	} else if (APP_LAUNCH_REQUEST_EVENT == dialEvent) {
+		if (dialState != "running") {
+			if (!tiface->launchPremiumApp(dialParams.appName)) {
+				LOGERR("Failed to launch app %s", dialParams.appName.c_str());
+				return;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		} else {
+			LOGINFO("App %s is already running, sending deep link request directly.", dialParams.appName.c_str());
+		}
+		if (!tiface->sendDeepLinkRequest(dialParams)) {
+			LOGERR("Failed to send deep link request for app %s", dialParams.appName.c_str());
+			return;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	} else if (APP_HIDE_REQUEST_EVENT == dialEvent) {
+		if (dialState != "suspended") {
+			if (!tiface->suspendPremiumApp(dialParams.appName)) {
+				LOGERR("Failed to suspend app %s", dialParams.appName.c_str());
+				return;
+			}
+		} else {
+			LOGINFO("App %s is already suspended.", dialParams.appName.c_str());
+		}
+	} else if (APP_STOP_REQUEST_EVENT == dialEvent) {
+		if (dialState != "stopped") {
+			if (!tiface->shutdownPremiumApp(dialParams.appName)) {
+				LOGERR("Failed to stop app %s", dialParams.appName.c_str());
+				return;
+			}
+		} else {
+			LOGINFO("App %s is already stopped.", dialParams.appName.c_str());
+		}
+	} else if (APP_RESUME_REQUEST_EVENT == dialEvent) {
+		if (dialState == "suspended") {
+			if (!tiface->resumePremiumApp(dialParams.appName)) {
+				LOGERR("Failed to resume app %s", dialParams.appName.c_str());
+				return;
+			}
+		} else {
+			if (!tiface->launchPremiumApp(dialParams.appName)) {
+				LOGERR("Failed to launch app %s", dialParams.appName.c_str());
+				return;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		}
+	} else {
 		LOGERR("Unknown event %d", dialEvent);
 	}
 }
