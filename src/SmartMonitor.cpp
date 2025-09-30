@@ -222,12 +222,7 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 			LOGINFO("App %s is already stopped.", dialParams.appName.c_str());
 		}
 	} else if (APP_RESUME_REQUEST_EVENT == dialEvent) {
-		if (dialState == "suspended") {
-			if (!tiface->resumePremiumApp(dialParams.appName)) {
-				LOGERR("Failed to resume app %s", dialParams.appName.c_str());
-				return;
-			}
-		} else {
+		if (dialState != "running") {
 			if (!tiface->launchPremiumApp(dialParams.appName)) {
 				LOGERR("Failed to launch app %s", dialParams.appName.c_str());
 				return;
