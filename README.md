@@ -47,8 +47,8 @@ DEPENDS += "jsoncpp websocketpp systemd boost"
 
 Preconditions: Activate required plugins before running this test app.
 ```bash
-curl -X POST http://0.0.0.0:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
-curl -X POST http://0.0.0.0:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
 ```
 
 ```bash
@@ -151,4 +151,4 @@ netstat -tlnp | grep -E ":(56889|56890|56789)"
 ./xdialtester --enable-apps=YouTube,Netflix --enable-debug
 ```
 
-4. Run the mobile application to test the casting functionality
+4. Launch the Second screen mobile application to test the casting functionality on First screen.
