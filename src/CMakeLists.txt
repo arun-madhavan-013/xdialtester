@@ -15,6 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Get Git short SHA
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHORT_SHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+
+# If Git command fails, set a default value
+if(NOT GIT_SHORT_SHA)
+    set(GIT_SHORT_SHA "unknown")
+endif()
+
 add_executable(${TARGET}
    XdialTester.cpp
    SmartMonitor.cpp
@@ -23,6 +37,9 @@ add_executable(${TARGET}
    thunder/ProtocolHandler.cpp
    thunder/ResponseHandler.cpp
 )
+
+# Add compile definition for Git SHA
+target_compile_definitions(${TARGET} PRIVATE GIT_SHORT_SHA="${GIT_SHORT_SHA}")
 
 find_package(PkgConfig)
 find_package(jsoncpp)
@@ -39,4 +56,3 @@ set_target_properties(${TARGET} PROPERTIES
         )
 
 install(TARGETS ${TARGET} DESTINATION bin)
-

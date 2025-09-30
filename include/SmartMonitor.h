@@ -43,6 +43,7 @@ class SmartMonitor
   ThunderInterface *tiface;
 
   void onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams);
+  void onRDKShellEvent(const std::string &event, const std::string &params);
 
   SmartMonitor();
   ~SmartMonitor();
@@ -58,7 +59,8 @@ public:
   void waitForTermSignal();
   bool getConnectStatus();
   bool checkAndEnableCasting();
-  bool registerYoutube();
+  bool registerDIALApps(const string &appCallsigns);
+  bool getPluginState(const string &myapp, string &state);
   bool isAppRunning(const string &myapp);
   bool setStandbyBehaviour();
 

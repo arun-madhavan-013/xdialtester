@@ -19,24 +19,38 @@
 
 #pragma once
 #include <string>
+#include <vector>
 using namespace std;
 
 #include "EventListener.h"
+#include "json/json.h"
 
+// Structure to hold app configuration data
+struct AppConfig {
+    std::string name;
+    std::string baseurl;
+    std::string deeplinkmethod;
+};
+
+// Global app configuration list
+extern std::vector<AppConfig> g_appConfigList;
 
 string getSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
 string enableCastingToJson(bool enable = true);
-string getYoutubeRegisterToJson(int &id);
+string getRegisterAppToJson(int &id, const string &appCallsigns);
 string getThunderMethodToJson(const string &method, int &id);
 string isCastingEnabledToJson(int &);
 string setStandbyBehaviourToJson(int &id);
+bool parseJson(const string &jsonMsg, Json::Value &root);
 bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
 bool convertResultStringToBool(const string &root, bool &);
 bool convertEventSubResponseToInt(const string &root, int &);
+bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value);
 string getClientListToJson(int &id);
 string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
 string launchAppToJson(const string &appName, int &id);
+string suspendAppToJson(const string &appName, int &id);
 string shutdownAppToJson(const string &appName, int &id);
 string sendDeepLinkToJson(const DialParams &dialParams, int &id);

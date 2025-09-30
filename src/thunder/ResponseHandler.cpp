@@ -65,19 +65,16 @@ void ResponseHandler::handleEvent()
 
         if (eventName.find("onApplicationHideRequest") != string::npos)
         {
-
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_HIDE_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationLaunchRequest") != string::npos)
         {
-
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_LAUNCH_REQUEST_EVENT, dialParams);
         }
         else if (eventName.find("onApplicationResumeRequest") != string::npos)
         {
-
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_RESUME_REQUEST_EVENT, dialParams);
         }
@@ -88,10 +85,22 @@ void ResponseHandler::handleEvent()
         }
         else if (eventName.find("onApplicationStateRequest") != string::npos)
         {
-
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
         }
+        // RDKShell events
+		else if (eventName.find("onApplicationActivated") != string::npos ||
+				 eventName.find("onApplicationLaunched") != string::npos ||
+				 eventName.find("onApplicationResumed") != string::npos ||
+				 eventName.find("onApplicationSuspended") != string::npos ||
+				 eventName.find("onApplicationTerminated") != string::npos ||
+				 eventName.find("onDestroyed") != string::npos ||
+				 eventName.find("onLaunched") != string::npos ||
+				 eventName.find("onSuspended") != string::npos ||
+				 eventName.find("onPluginSuspended") != string::npos)
+		{
+			mp_listener->onRDKShellEvents(eventName, eventMsg);
+		}
         else
         {
             LOGERR("Unrecognized event %s ", eventName.c_str());

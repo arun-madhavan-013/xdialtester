@@ -24,15 +24,44 @@
 #include "SmartMonitor.h"
 #include "EventUtils.h"
 
+// Global debug variables - check environment variable or command line flag
+bool debug = (getenv("SMDEBUG") != NULL);
+bool tdebug = (getenv("SMDEBUG") != NULL);
+
 static const char *VERSION = "1.0.6";
 
+#ifndef GIT_SHORT_SHA
+#define GIT_SHORT_SHA "unknown"
+#endif
+
+/***
+ * Main entry point for the application
+ * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug]
+ */
 int main(int argc, char *argv[])
 {
-    LOGINFO("Smart Monitor: %s" , VERSION);
+    LOGINFO("Smart Monitor: %s (%s)" , VERSION, GIT_SHORT_SHA);
+    string appCallsigns = "YouTube,Netflix,Amazon";
+    if (argc > 1) {
+		for (int i = 1; i < argc; i++) {
+		    string arg = argv[i];
+		    if (arg.find("--enable-apps=") != string::npos) {
+			    string apps = arg.substr(arg.find("=") + 1);
+				appCallsigns = apps;
+		    } else if (arg == "--enable-debug") {
+			    debug = true;
+			    tdebug = true;
+			    LOGINFO("Debug mode enabled");
+		    } else {
+			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
+			    return -1;
+		    }
+		}
+    }
 
     SmartMonitor *smon = SmartMonitor::getInstance();
     smon->initialize();
-    
+
     do
     {
         smon->connectToThunder();
@@ -42,7 +71,8 @@ int main(int argc, char *argv[])
     smon->registerForEvents();
     smon->setStandbyBehaviour();
     smon->checkAndEnableCasting();
-    smon->registerYoutube();
+	LOGINFO("Enabling DIAL apps: %s", appCallsigns.c_str());
+    smon->registerDIALApps(appCallsigns);
     smon->waitForTermSignal();
 
     return 0;
