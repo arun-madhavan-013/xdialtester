@@ -27,6 +27,7 @@
 // Global debug variables - check environment variable or command line flag
 bool debug = (getenv("SMDEBUG") != NULL);
 bool tdebug = (getenv("SMDEBUG") != NULL);
+bool traceEnabled = (getenv("SMDEBUG") != NULL && std::string(getenv("SMDEBUG")) == "TRACE");
 
 static const char *VERSION = "1.1.1";
 
@@ -36,7 +37,7 @@ static const char *VERSION = "1.1.1";
 
 /***
  * Main entry point for the application
- * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug]
+ * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace]
  */
 int main(int argc, char *argv[])
 {
@@ -52,8 +53,11 @@ int main(int argc, char *argv[])
 			    debug = true;
 			    tdebug = true;
 			    LOGINFO("Debug mode enabled");
+		    } else if (arg == "--enable-trace") {
+			    traceEnabled = true;
+			    LOGINFO("Trace logging enabled");
 		    } else {
-			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
+			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace]", arg.c_str());
 			    return -1;
 		    }
 		}

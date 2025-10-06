@@ -1,6 +1,11 @@
 # xdialtester
 
-Native application to test DIAL functionality in RDK environment without an app manager or system UI. The implementation is based on XCast plugin and RDKShell for supporting app state management and reporting. By default YouTube, Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
+Native application to test DIAL functionality in RDK environment without an app manager or system UI. The ### Log Levels
+The application uses color-coded logging:
+- 🔴 **ERROR** (RED): Critical errors
+- 🟠 **WARN** (ORANGE): Warnings
+- 🟢 **TRACE** (GREEN): Debug trace information (enabled with `--enable-trace`)
+- ⚪ **INFO** (DEFAULT): General informationentation is based on XCast plugin and RDKShell for supporting app state management and reporting. By default YouTube, Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
 
 ## Features
 
@@ -36,12 +41,13 @@ DEPENDS += "jsoncpp websocketpp systemd boost"
 |--------|-------------|---------|
 | `--enable-apps=<apps>` | Comma-separated list of apps | `--enable-apps=YouTube,Netflix,Amazon` |
 | `--enable-debug` | Enable detailed debug logging | `--enable-debug` |
+| `--enable-trace` | Enable trace-level logging (most verbose) | `--enable-trace` |
 
 ### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SMDEBUG` | Enable debug mode (alternative to --enable-debug) | Not set |
+| `SMDEBUG` | Enable debug(if defined) and trace mode (when its exactly set as "TRACE") | Not set |
 
 ### Basic Usage
 
@@ -61,8 +67,14 @@ curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":
 # Enable debug logging
 ./xdialtester --enable-debug
 
-# Combination
-./xdialtester --enable-apps=Netflix --enable-debug
+# Enable trace logging (most verbose)
+./xdialtester --enable-trace
+
+# Enable both debug and trace logging
+./xdialtester --enable-debug --enable-trace
+
+# Combination with specific apps
+./xdialtester --enable-apps=Netflix --enable-debug --enable-trace
 ```
 
 ## Configuration
@@ -116,8 +128,10 @@ This can intake an optional app configuration `/opt/appConfig.json` on startup. 
 The application uses color-coded logging:
 - 🔴 **ERROR** (RED): Critical errors
 - 🟠 **WARN** (ORANGE): Warnings
-- 🟢 **TRACE** (GREEN): Debug trace information
+- � **TRACE** (CYAN): Debug trace information (enabled with `--enable-trace`)
 - ⚪ **INFO** (DEFAULT): General information
+
+**Note:** TRACE logging is now controlled by the `--enable-trace` command-line flag instead of compile-time defines.
 
 ## Testing DIAL Functionality
 
