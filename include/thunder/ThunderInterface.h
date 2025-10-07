@@ -48,7 +48,7 @@ public:
     // Inherited from EventListener class
     void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) override;
 	void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) override;
-	void registerControllerStateChangeEvents(std::function<void(const std::string &, const std::string &)> callback) override;
+	void addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback) override;
 
     void registerConnectStatusListener(std::function<void(bool)> callback)
     {

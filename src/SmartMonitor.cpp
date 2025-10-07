@@ -115,10 +115,10 @@ void SmartMonitor::registerForEvents()
     tiface->registerRDKShellEvents([&, this](const std::string &event, const std::string &params)
 								 { onRDKShellEvent(event, params); });
 	tiface->addControllerStateChangeListener([&, this](const std::string &event, const std::string &params)
-								 { onControllerStateChangeEvents(event, params); });
+								 { onControllerStateChangeEvent(event, params); });
 }
 
-void SmartMonitor::onControllerStateChangeEvents(const std::string &event, const std::string &params)
+void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received Controller State Change Event: %s with params: %s", event.c_str(), params.c_str());
 }
@@ -277,7 +277,7 @@ bool SmartMonitor::getPluginState(const string &myapp, string &state)
 			convertPluginStateToDIALState(state, m_dialApps[AMAZON].dialState);
 		}
 		for (int i = YOUTUBE; i < APPLIMIT; i++) {
-			LOGINFO("Update App State Cache %s: pluginState=%s, dialState=%s", ,
+			LOGINFO("Update App State Cache %s: pluginState=%s, dialState=%s",
 				m_dialApps[i].appName.c_str(), m_dialApps[i].pluginState.c_str(), m_dialApps[i].dialState.c_str());
 		}
 	} else {
