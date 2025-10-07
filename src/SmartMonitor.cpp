@@ -128,7 +128,10 @@ void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const 
 		LOGERR("Failed to extract callsign from params: %s", params.c_str());
 		return;
 	}
-	if (callsign == "")
+	// convert callsign Cobalt to YouTube
+	if (callsign == "Cobalt") {
+		callsign = "YouTube";
+	}
 	if (!getValueOfKeyFromJson(params, "state", state)) {
 		LOGERR("Failed to extract state from params: %s", params.c_str());
 		return;
@@ -136,6 +139,16 @@ void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const 
 	std::string dialState = "unknown";
 	if (convertPluginStateToDIALState(state, dialState)) {
 		tiface->reportDIALAppState(callsign, "", dialState);
+		// Update the app state in the map
+		for (int i = YOUTUBE; i < APPLIMIT; i++) {
+			if (m_dialApps[i].appName == callsign) {
+				m_dialApps[i].pluginState = state;
+				m_dialApps[i].dialState = dialState;
+				LOGINFO("Update App State Cache %s: pluginState=%s, dialState=%s",
+					m_dialApps[i].appName.c_str(), m_dialApps[i].pluginState.c_str(), m_dialApps[i].dialState.c_str());
+				break;
+			}
+		}
 	} else {
 		LOGERR("Failed to convert state %s for app %s", state.c_str(), callsign.c_str());
 	}
