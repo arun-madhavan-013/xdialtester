@@ -38,7 +38,7 @@ extern std::vector<AppConfig> g_appConfigList;
 string getSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getUnSubscribeRequest(const string &callsignWithVer, const string &event, int &id);
 string getMemoryLimitRequest(int lowMem, int criticalMem, int &id);
-string enableCastingToJson(bool enable = true, int &id);
+string enableCastingToJson(bool enable, int &id);
 string getRegisterAppToJson(int &id, const string &appCallsigns);
 string getThunderMethodToJson(const string &method, int &id);
 string isCastingEnabledToJson(int &);

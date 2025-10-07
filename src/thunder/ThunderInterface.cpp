@@ -195,7 +195,7 @@ void ThunderInterface::connectToThunder()
                                   { handler->connect(); });
 }
 
-bool ThunderInterface::enableCasting(bool enable )
+bool ThunderInterface::enableCasting(bool enable)
 {
     LOGTRACE("Enter.. ");
     bool status = false;
