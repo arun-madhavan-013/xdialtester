@@ -349,7 +349,9 @@ bool SmartMonitor::checkAndEnableCasting(const string &friendlyname)
     LOGTRACE("Casting status .. %s", result.c_str());
     if (result == "false")
     {
-        if (tiface->setFriendlyName(friendlyname))
+        if (!tiface->setFriendlyName(friendlyname)) {
+            LOGERR("Failed to set friendly name to %s", friendlyname.c_str());
+        }
         status = tiface->enableCasting();
         LOGTRACE("Casting result .. %s", (status ? "true" : "false"));
     }
