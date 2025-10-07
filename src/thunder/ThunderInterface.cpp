@@ -244,6 +244,22 @@ bool ThunderInterface::getFriendlyName(std::string &name)
     return status;
 }
 
+bool ThunderInterface::setFriendlyName(const std::string &name)
+{
+    LOGTRACE("Setting friendly name.. ");
+    bool status = false;
+    int msgId = 0;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    std::string jsonmsg = setFriendlyNameToJson(name, msgId);
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(msgId);
+        convertResultStringToBool(response, status);
+    }
+    return status;
+}
+
 bool ThunderInterface::getPluginState(const string &myapp, string &state)
 {
 	LOGTRACE("Getting plugin state.. ");

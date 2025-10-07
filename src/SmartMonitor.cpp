@@ -340,7 +340,7 @@ void SmartMonitor::unRegisterForEvents()
 	tiface->removeControllerStateChangeListener();
 }
 
-bool SmartMonitor::checkAndEnableCasting()
+bool SmartMonitor::checkAndEnableCasting(const string &friendlyname)
 {
     LOGTRACE("Enabling casting.. ");
     bool status = false;
@@ -349,6 +349,7 @@ bool SmartMonitor::checkAndEnableCasting()
     LOGTRACE("Casting status .. %s", result.c_str());
     if (result == "false")
     {
+        if (tiface->setFriendlyName(friendlyname))
         status = tiface->enableCasting();
         LOGTRACE("Casting result .. %s", (status ? "true" : "false"));
     }

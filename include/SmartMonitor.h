@@ -70,7 +70,7 @@ public:
   void unRegisterForEvents();
   void waitForTermSignal();
   bool getConnectStatus();
-  bool checkAndEnableCasting();
+  bool checkAndEnableCasting(const staring &friendlyname);
   bool registerDIALApps(const string &appCallsigns);
   bool getPluginState(const string &myapp, string &state);
   bool convertPluginStateToDIALState(const std::string &pluginState, std::string &dialState);

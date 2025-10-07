@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <random>
 #include <systemd/sd-daemon.h>
 
 #include "SmartMonitor.h"
@@ -35,14 +36,23 @@ static const char *VERSION = "1.1.2";
 #define GIT_SHORT_SHA "unknown"
 #endif
 
+// Generate 8-digit random number for default friendly name
+std::string generateDefaultFriendlyName() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(10000000, 99999999);
+    return "RDKE-" + std::to_string(dis(gen));
+}
+
 /***
  * Main entry point for the application
- * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace]
+ * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace] [--friendlyname=myDevice12345]
  */
 int main(int argc, char *argv[])
 {
     LOGINFO("Smart Monitor: %s (%s)" , VERSION, GIT_SHORT_SHA);
     string appCallsigns = "YouTube,Netflix,Amazon";
+    string friendlyname = generateDefaultFriendlyName();
     if (argc > 1) {
 		for (int i = 1; i < argc; i++) {
 		    string arg = argv[i];
@@ -56,8 +66,10 @@ int main(int argc, char *argv[])
 		    } else if (arg == "--enable-trace") {
 			    traceEnabled = true;
 			    LOGINFO("Trace logging enabled");
+			} else if (arg.find("--friendlyname=") != string::npos) {
+				friendlyname = arg.substr(arg.find("=") + 1);
 		    } else {
-			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace]", arg.c_str());
+			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace] [--friendlyname=myDevice12345]", arg.c_str());
 			    return -1;
 		    }
 		}
@@ -74,7 +86,7 @@ int main(int argc, char *argv[])
     } while (!smon->getConnectStatus());
     smon->registerForEvents();
     smon->setStandbyBehaviour();
-    smon->checkAndEnableCasting();
+    smon->checkAndEnableCasting(friendlyname);
 	LOGINFO("Enabling DIAL apps: %s", appCallsigns.c_str());
     smon->registerDIALApps(appCallsigns);
     smon->waitForTermSignal();

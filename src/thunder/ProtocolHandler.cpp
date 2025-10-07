@@ -132,6 +132,22 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
 
     return getStringFromJson(root);
 }
+
+string setFriendlyNameToJson(const std::string &name, int &id)
+{
+	Json::Value root;
+	addVersion(root, id);
+
+	root["method"] = "org.rdk.System.setFriendlyName";
+
+	Json::Value params;
+	params["friendlyName"] = name;
+
+	root["params"] = params;
+
+	return getStringFromJson(root);
+}
+
 string enableCastingToJson(bool enable, int &id)
 {
     Json::Value root;
@@ -146,6 +162,7 @@ string enableCastingToJson(bool enable, int &id)
 
     return getStringFromJson(root);
 }
+
 string isCastingEnabledToJson(int &id)
 {
     return getThunderMethodToJson("org.rdk.Xcast.1.getEnabled", id);

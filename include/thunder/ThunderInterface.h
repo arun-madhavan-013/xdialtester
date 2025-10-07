@@ -60,6 +60,7 @@ public:
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
+    bool setFriendlyName(const std::string &name);
     bool registerXcastApps(const std::string &appCallsigns);
     bool getPluginState(const string &myapp, string &state);
     bool setStandbyBehaviour();
