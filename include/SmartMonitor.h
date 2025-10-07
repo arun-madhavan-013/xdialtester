@@ -54,6 +54,7 @@ class SmartMonitor
 
   void onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams);
   void onRDKShellEvent(const std::string &event, const std::string &params);
+  void onControllerStateChangeEvent(const std::string &event, const std::string &params);
 
   SmartMonitor();
   ~SmartMonitor();

@@ -114,7 +114,7 @@ void SmartMonitor::registerForEvents()
                                  { onDialEvent(dialEvent, dialParams); });
     tiface->registerRDKShellEvents([&, this](const std::string &event, const std::string &params)
 								 { onRDKShellEvent(event, params); });
-	tiface->registerControllerStateChangeEvents([&, this](const std::string &event, const std::string &params)
+	tiface->addControllerStateChangeListener([&, this](const std::string &event, const std::string &params)
 								 { onControllerStateChangeEvents(event, params); });
 }
 
