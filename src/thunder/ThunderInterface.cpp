@@ -201,7 +201,7 @@ bool ThunderInterface::enableCasting(bool enable )
     bool status = false;
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
-    std::string jsonmsg = enableCastingToJson();
+    std::string jsonmsg = enableCastingToJson(true, msgId);
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {

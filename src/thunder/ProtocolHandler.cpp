@@ -30,7 +30,9 @@ class ThunderInterface;
 extern std::vector<AppConfig> g_appConfigList;
 
 static int event_id = 1001;
-string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);void addVersion(Json::Value &root, int &id)
+string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);
+
+void addVersion(Json::Value &root, int &id)
 {
     root["jsonrpc"] = "2.0";
     id = event_id;
@@ -130,10 +132,9 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
 
     return getStringFromJson(root);
 }
-string enableCastingToJson(bool enable)
+string enableCastingToJson(bool enable, int &id)
 {
     Json::Value root;
-    int id = 0;
     addVersion(root, id);
 
     root["method"] = "org.rdk.Xcast.1.setEnabled";
