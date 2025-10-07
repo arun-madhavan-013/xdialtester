@@ -27,6 +27,15 @@
 #include "thunder/ThunderInterface.h"
 using std::string;
 
+typedef enum { YOUTUBE, NETFLIX, AMAZON, APPLIMIT } DialApps;
+
+typedef struct appDialState_t
+{
+	DialApps app;
+	string dialState;
+	string pluginState;
+} appDialState_t;
+
 class SmartMonitor
 {
 
@@ -35,6 +44,7 @@ class SmartMonitor
   volatile bool m_isActive;
   volatile bool isConnected;
   std::mutex m_lock;
+  appDialState_t m_dialApps[DialApps::APPLIMIT];
 
   //  MonitorConfig *config;
 

@@ -93,9 +93,14 @@ int SmartMonitor::initialize()
                                           { isConnected = connectionStatus; });
     tiface->initialize();
 
+    m_dialApps[YOUTUBE] = {DialApps::YOUTUBE, "unknown", "unknown"};
+	m_dialApps[NETFLIX] = {DialApps::NETFLIX, "unknown", "unknown"};
+	m_dialApps[AMAZON] = {DialApps::AMAZON, "unknown", "unknown"};
+
     status = true;
     return status;
 }
+
 void SmartMonitor::connectToThunder()
 {
     LOGTRACE("Connecting to thunder.. ");
@@ -109,6 +114,13 @@ void SmartMonitor::registerForEvents()
                                  { onDialEvent(dialEvent, dialParams); });
     tiface->registerRDKShellEvents([&, this](const std::string &event, const std::string &params)
 								 { onRDKShellEvent(event, params); });
+	tiface->registerControllerStateChangeEvents([&, this](const std::string &event, const std::string &params)
+								 { onControllerStateChangeEvents(event, params); });
+}
+
+void SmartMonitor::onControllerStateChangeEvents(const std::string &event, const std::string &params)
+{
+	LOGINFO("Received Controller State Change Event: %s with params: %s", event.c_str(), params.c_str());
 }
 
 void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &params)
@@ -136,18 +148,16 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 
 	if (validEvents.find(actualEvent) != validEvents.end()) {
 		LOGINFO("Event %s is a valid RDKShell event.", actualEvent.c_str());
-		if (actualEvent == "onApplicationLaunched") {
-			std::string state = "stopped";
-			// params has the following format: "params": {"client": "org.rdk.Netflix"}
-			// extract client value as appName and set appId as empty string
-			std::string appName;
-			if (!getValueOfKeyFromJson(params, "client", appName)) {
-				LOGERR("Failed to extract client from params: %s", params.c_str());
-				return;
-			}
-			if (getPluginState(appName, state)) {
-				tiface->reportDIALAppState(appName, "", state);
-			}
+		std::string state = "stopped";
+		// params has the following format: "params": {"client": "org.rdk.Netflix"}
+		// extract client value as appName and set appId as empty string
+		std::string appName;
+		if (!getValueOfKeyFromJson(params, "client", appName)) {
+			LOGERR("Failed to extract client from params: %s", params.c_str());
+			return;
+		}
+		if (getPluginState(appName, state)) {
+			tiface->reportDIALAppState(appName, "", state);
 		}
 	} else {
 		LOGINFO("Event %s is not a monitored RDKShell event.", actualEvent.c_str());
@@ -236,7 +246,44 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 
 bool SmartMonitor::getPluginState(const string &myapp, string &state)
 {
-	return tiface->getPluginState(myapp, state);
+	bool status = false;
+	LOGTRACE("Getting plugin state for app %s.. ", myapp.c_str());
+	if (myapp.empty()) {
+		LOGERR("App name is empty.");
+		return false;
+	}
+	// Use the cached state when available to reduce the calls to Thunder
+	if ((myapp == "YouTube") && m_dialApps[YOUTUBE].pluginState != "unknown") {
+		state = m_dialApps[YOUTUBE].dialState;
+		return true;
+	} else if ((myapp == "Netflix") && m_dialApps[NETFLIX].pluginState != "unknown") {
+		state = m_dialApps[NETFLIX].dialState;
+		return true;
+	} else if ((myapp == "Amazon") && m_dialApps[AMAZON].pluginState != "unknown") {
+		state = m_dialApps[AMAZON].dialState;
+		return true;
+	}
+
+	if (tiface->getPluginState(myapp, state)) {
+		status = true;
+		if (myapp == "YouTube") {
+			m_dialApps[YOUTUBE].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[YOUTUBE].dialState);
+		} else if (myapp == "Netflix") {
+			m_dialApps[NETFLIX].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[NETFLIX].dialState);
+		} else if (myapp == "Amazon") {
+			m_dialApps[AMAZON].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[AMAZON].dialState);
+		}
+		for (int i = YOUTUBE; i < APPLIMIT; i++) {
+			LOGINFO("Update App State Cache %s: pluginState=%s, dialState=%s", ,
+				m_dialApps[i].appName.c_str(), m_dialApps[i].pluginState.c_str(), m_dialApps[i].dialState.c_str());
+		}
+	} else {
+		LOGERR("Failed to get plugin state for app %s", myapp.c_str());
+	}
+	return status;
 }
 
 bool SmartMonitor::isAppRunning(const string &myapp)
@@ -254,6 +301,8 @@ bool SmartMonitor::isAppRunning(const string &myapp)
 void SmartMonitor::unRegisterForEvents()
 {
     tiface->removeDialListener();
+	tiface->removeRDKShellListener();
+	tiface->removeControllerStateChangeListener();
 }
 
 bool SmartMonitor::checkAndEnableCasting()

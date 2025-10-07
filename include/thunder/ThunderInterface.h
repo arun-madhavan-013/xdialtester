@@ -48,6 +48,7 @@ public:
     // Inherited from EventListener class
     void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) override;
 	void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) override;
+	void registerControllerStateChangeEvents(std::function<void(const std::string &, const std::string &)> callback) override;
 
     void registerConnectStatusListener(std::function<void(bool)> callback)
     {
@@ -55,6 +56,7 @@ public:
     };
     void removeDialListener() override;
     void removeRDKShellListener() override;
+	void removeControllerStateChangeListener() override;
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
@@ -87,4 +89,5 @@ private:
 
     void onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams) override;
 	void onRDKShellEvents(const std::string &event, const std::string &params) override;
+	void onControllerStateChangeEvents(const std::string &event, const std::string &params) override;
 };

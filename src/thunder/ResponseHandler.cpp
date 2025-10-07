@@ -101,10 +101,15 @@ void ResponseHandler::handleEvent()
 		{
 			mp_listener->onRDKShellEvents(eventName, eventMsg);
 		}
-        else
-        {
-            LOGERR("Unrecognized event %s ", eventName.c_str());
-        }
+		// Controller State Change events
+		else if (eventName.find("onStateChange") != string::npos)
+		{
+			mp_listener->onControllerStateChangeEvents(eventName, eventMsg);
+		}
+		else
+		{
+			LOGERR("Unrecognized event %s ", eventName.c_str());
+		}
     } // Here end if(getEventId(eventMsg,eventName))
     else
     {

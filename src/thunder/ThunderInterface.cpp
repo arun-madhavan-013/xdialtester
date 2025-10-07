@@ -371,16 +371,35 @@ void ThunderInterface::registerEvent(const std::string &callsignWithVersion, con
 // Do not call this directly. These are callback functions
 void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-    LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
+    LOGTRACE("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
         m_dialListener(dialEvent, dialParams);
 }
 
 void ThunderInterface::onRDKShellEvents(const std::string &event, const std::string &params)
 {
-	LOGINFO(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	LOGTRACE(" Event : %s, Params : %s", event.c_str(), params.c_str());
 	if (nullptr != m_rdkShellListener)
 		m_rdkShellListener(event, params);
+}
+
+void ThunderInterface::onControllerStateChangeEvents(const std::string &event, const std::string &params)
+{
+	LOGTRACE(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	if (nullptr != m_controllerStateChangeListener)
+		m_controllerStateChangeListener(event, params);
+}
+
+void ThunderInterface::addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback)
+{
+    m_controllerStateChangeListener = callback;
+	registerEvent("Controller.1.", "onStateChange", true);
+}
+
+void ThunderInterface::removeControllerStateChangeListener()
+{
+    m_controllerStateChangeListener = nullptr;
+	registerEvent("Controller.1.", "onStateChange", false);
 }
 
 void ThunderInterface::removeRDKShellListener()
