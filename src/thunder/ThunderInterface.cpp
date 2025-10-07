@@ -465,7 +465,7 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
         convertResultStringToArray(response, "clients", m_appList);
     }
     return m_appList;
@@ -527,7 +527,7 @@ bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
         convertResultStringToBool(response, status);
     }
     return status;
@@ -560,7 +560,7 @@ bool ThunderInterface::suspendPremiumApp(const std::string &appName, int timeout
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
         convertResultStringToBool(response, status);
     }
     return status;
@@ -577,7 +577,7 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
         convertResultStringToBool(response, status);
     }
     return status;
