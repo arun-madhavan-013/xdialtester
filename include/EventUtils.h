@@ -30,6 +30,7 @@ using std::string;
 #include "EventListener.h"
 
 #define REQUEST_TIMEOUT_IN_MS 1000
+#define RDKSHELL_TIMEOUT_IN_MS 5000
 
 // These will be used for memory events to differentiate between critical and low memory states.
 template <typename T>

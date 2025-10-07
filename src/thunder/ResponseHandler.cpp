@@ -147,7 +147,7 @@ void ResponseHandler::runEventLoop()
 string ResponseHandler::getRequestStatus(int msgId, int timeout)
 {
     string response;
-    LOGTRACE("Waiting for id %d", msgId);
+    LOGTRACE("Waiting for id %d with timeout %d", msgId, timeout);
     dumpMap(m_msgMap);
 
     std::unique_lock<std::mutex> lock_guard(m_mtx);
