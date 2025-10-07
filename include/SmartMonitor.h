@@ -32,6 +32,7 @@ typedef enum { YOUTUBE, NETFLIX, AMAZON, APPLIMIT } DialApps;
 typedef struct appDialState_t
 {
 	DialApps app;
+	string appName;
 	string dialState;
 	string pluginState;
 } appDialState_t;

@@ -93,9 +93,9 @@ int SmartMonitor::initialize()
                                           { isConnected = connectionStatus; });
     tiface->initialize();
 
-    m_dialApps[YOUTUBE] = {DialApps::YOUTUBE, "unknown", "unknown"};
-	m_dialApps[NETFLIX] = {DialApps::NETFLIX, "unknown", "unknown"};
-	m_dialApps[AMAZON] = {DialApps::AMAZON, "unknown", "unknown"};
+    m_dialApps[YOUTUBE] = {DialApps::YOUTUBE, "YouTube", "unknown", "unknown"};
+	m_dialApps[NETFLIX] = {DialApps::NETFLIX, "Netflix", "unknown", "unknown"};
+	m_dialApps[AMAZON] = {DialApps::AMAZON, "Amazon", "unknown", "unknown"};
 
     status = true;
     return status;

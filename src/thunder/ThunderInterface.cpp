@@ -393,7 +393,7 @@ void ThunderInterface::onControllerStateChangeEvents(const std::string &event, c
 void ThunderInterface::addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback)
 {
     m_controllerStateChangeListener = callback;
-	registerEvent("Controller.1.", "onStateChange", true);
+    registerEvent("Controller.1.", "onStateChange", true);
 }
 
 void ThunderInterface::removeControllerStateChangeListener()

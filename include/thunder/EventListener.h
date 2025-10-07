@@ -47,7 +47,7 @@ protected:
 public:
     virtual void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) = 0;
     virtual void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) = 0;
-    virtual void registerControllerStateChangeEvents(std::function<void(const std::string &, const std::string &)> callback) = 0;
+    virtual void addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback) = 0;
 
     virtual void removeDialListener() = 0;
     virtual void removeRDKShellListener() = 0;
