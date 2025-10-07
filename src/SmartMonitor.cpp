@@ -137,6 +137,7 @@ void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const 
 		return;
 	}
 	std::string dialState = "unknown";
+	std::transform(state.begin(), state.end(), state.begin(), ::tolower);
 	if (convertPluginStateToDIALState(state, dialState)) {
 		tiface->reportDIALAppState(callsign, "", dialState);
 		// Update the app state in the map
