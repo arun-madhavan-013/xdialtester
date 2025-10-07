@@ -12,6 +12,7 @@ The application uses color-coded logging:
 - **Real-time App Monitoring**: Tracks application lifecycle events (launch, suspend, resume, terminate) with the help of `RDKShell` plugin events.
 - **Debug Logging**: Comprehensive logging with color-coded output along with option to enable extended debug logs.
 - **JSON Configuration**: Override option for app settings using optional `/opt/appConfig.json` - specifying app specific deeplink method and baseurl.
+- **Friendly Name Configuration**: Enables network friendly name settings with default format `RDKE-<8DigitRandomNumber>`
 
 ## Build
 
@@ -42,6 +43,7 @@ DEPENDS += "jsoncpp websocketpp systemd boost"
 | `--enable-apps=<apps>` | Comma-separated list of apps | `--enable-apps=YouTube,Netflix,Amazon` |
 | `--enable-debug` | Enable detailed debug logging | `--enable-debug` |
 | `--enable-trace` | Enable trace-level logging (most verbose) | `--enable-trace` |
+| `--friendlyname=<Name>` | Provide custom friendly name | `--friendlyname=RDKE12345` |
 
 ### Environment Variables
 
@@ -55,6 +57,8 @@ Preconditions: Activate required plugins before running this test app.
 ```bash
 curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
 curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
+
 ```
 
 ```bash
@@ -75,6 +79,9 @@ curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":
 
 # Combination with specific apps
 ./xdialtester --enable-apps=Netflix --enable-debug --enable-trace
+
+# Set custom friendly name
+./xdialtester --friendlyname=RDKE12345
 ```
 
 ## Configuration
@@ -128,10 +135,8 @@ This can intake an optional app configuration `/opt/appConfig.json` on startup. 
 The application uses color-coded logging:
 - 🔴 **ERROR** (RED): Critical errors
 - 🟠 **WARN** (ORANGE): Warnings
-- � **TRACE** (CYAN): Debug trace information (enabled with `--enable-trace`)
+- 🟢 **TRACE** (GREEN): Debug trace information (enabled with `--enable-trace`)
 - ⚪ **INFO** (DEFAULT): General information
-
-**Note:** TRACE logging is now controlled by the `--enable-trace` command-line flag instead of compile-time defines.
 
 ## Testing DIAL Functionality
 
@@ -153,6 +158,9 @@ curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":
 # Activate RDKShell plugin (handles app lifecycle)
 curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
 
+# Activate System plugin (for setting friendly name etc)
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
+
 # Verify plugins are active
 curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.status"}'
 
@@ -162,7 +170,7 @@ netstat -tlnp | grep -E ":(56889|56890|56789)"
 
 3. Start xdialtester application:
 ```bash
-./xdialtester --enable-apps=YouTube,Netflix --enable-debug
+./xdialtester --enable-apps=YouTube,Netflix
 ```
 
 4. Launch the Second screen mobile application to test the casting functionality on First screen.
