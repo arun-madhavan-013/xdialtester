@@ -192,6 +192,10 @@ bool SmartMonitor::convertPluginStateToDIALState(const std::string &pluginState,
 		dialState = "running";
 	} else if ((pluginState == "suspended") || (pluginState == "hibernated")) {
 		dialState = "suspended";
+	} else if ((pluginState == "hidden") || (pluginState == "stopped")
+			|| (pluginState == "running") || (pluginState == "suspended")) {
+		// valid dial states: running, stopped, suspended, hidden. if pluginState is one of those, pass as is.
+		dialState = pluginState;
 	} else {
 		LOGWARN("Unknown plugin state %s received.", pluginState.c_str());
 		status = false;
