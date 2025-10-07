@@ -29,7 +29,7 @@ bool debug = (getenv("SMDEBUG") != NULL);
 bool tdebug = (getenv("SMDEBUG") != NULL);
 bool traceEnabled = (getenv("SMDEBUG") != NULL && std::string(getenv("SMDEBUG")) == "TRACE");
 
-static const char *VERSION = "1.1.1";
+static const char *VERSION = "1.1.2";
 
 #ifndef GIT_SHORT_SHA
 #define GIT_SHORT_SHA "unknown"

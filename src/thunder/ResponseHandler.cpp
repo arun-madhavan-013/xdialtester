@@ -102,7 +102,7 @@ void ResponseHandler::handleEvent()
 			mp_listener->onRDKShellEvents(eventName, eventMsg);
 		}
 		// Controller State Change events
-		else if (eventName.find("onStateChange") != string::npos)
+		else if (eventName.find("statechange") != string::npos)
 		{
 			mp_listener->onControllerStateChangeEvents(eventName, eventMsg);
 		}
