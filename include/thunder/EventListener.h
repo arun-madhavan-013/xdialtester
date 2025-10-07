@@ -43,6 +43,7 @@ class EventListener
 protected:
     std::function<void(DIALEVENTS, const DialParams &)> m_dialListener;
     std::function<void(const std::string &, const std::string &)> m_rdkShellListener;
+    std::function<void(const std::string &, const std::string &)> m_controllerStateChangeListener;
 
 public:
     virtual void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) = 0;
