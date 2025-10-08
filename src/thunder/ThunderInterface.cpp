@@ -51,6 +51,23 @@ void ThunderInterface::onMsgReceived(const string message)
     }
 }
 
+void ThunderInterface::onEventReceived(const Json::Value& event)
+{
+    // Convert JSON event back to string for existing event processing
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "";
+    std::ostringstream os;
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+    writer->write(event, &os);
+    std::string eventStr = os.str();
+
+    LOGINFO("Event received: %s", eventStr.c_str());
+
+    // Forward to existing event processing system
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    evtHandler->addMessageToEventQueue(eventStr);
+}
+
 ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nullptr), mp_thThread(nullptr)
 {
     mp_handler = new TransportHandler();
@@ -157,6 +174,11 @@ int ThunderInterface::initialize()
                                           { connected(isConnected); });
     mp_handler->registerMessageHandler([this](string message)
                                        { onMsgReceived(message); });
+
+    // Register event handler for Thunder notifications (messages with "method" but no "id")
+    mp_handler->registerEventHandler([this](const Json::Value& event) {
+        onEventReceived(event);
+    });
 
     ResponseHandler::getInstance()->registerEventListener(this);
     int status = mp_handler->initializeTransport();

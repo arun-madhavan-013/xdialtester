@@ -23,6 +23,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include "json/json.h"
 
 #include "EventUtils.h"
 #include "TransportHandler.h"
@@ -83,6 +84,7 @@ private:
 
     void connected(bool connected);
     void onMsgReceived(const std::string message);
+    void onEventReceived(const Json::Value& event);
     void registerEvent(const std::string &event, bool isBinding);
     void registerEvent(const std::string &callsignWithVersion, const std::string &event, bool isBinding);
     bool sendMessage(const std::string jsonmsg, int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
