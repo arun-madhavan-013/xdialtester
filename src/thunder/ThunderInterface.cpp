@@ -202,11 +202,12 @@ bool ThunderInterface::enableCasting(bool enable)
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = enableCastingToJson(true, msgId);
-
+    LOGINFO(" Request : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-            convertResultStringToBool(response, status);
+        string response = evtHandler->getRequestStatus(msgId);
+        bool retstat = convertResultStringToBool(response, "success", status);
+        status = retstat ? status : false;
     }
     return status;
 }
@@ -219,14 +220,15 @@ bool ThunderInterface::isCastingEnabled(string &result)
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = getThunderMethodToJson("org.rdk.Xcast.1.getEnabled", msgId);
-
+    LOGINFO(" Request : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-         getParamFromResult(response, "enabled", result);
+        string response = evtHandler->getRequestStatus(msgId);
+        getParamFromResult(response, "enabled", result);
     }
     return status;
 }
+
 bool ThunderInterface::getFriendlyName(std::string &name)
 {
     LOGTRACE("Getting friendly name.. ");
@@ -235,6 +237,7 @@ bool ThunderInterface::getFriendlyName(std::string &name)
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = getThunderMethodToJson("org.rdk.System.getFriendlyName", msgId);
+    LOGINFO(" Request : %s", jsonmsg.c_str());
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
@@ -251,6 +254,7 @@ bool ThunderInterface::setFriendlyName(const std::string &name)
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = setFriendlyNameToJson(name, msgId);
+    LOGINFO(" Request : %s", jsonmsg.c_str());
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
@@ -272,7 +276,7 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 
 	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
 	{
-		string response = evtHandler->getRequestStatus(msgId);
+		string response = evtHandler->getRequestStatus(msgId, 2500);
 
 		Json::Value root;
 		Json::CharReaderBuilder builder;
@@ -310,7 +314,7 @@ bool ThunderInterface::registerXcastApps(const string &appCallsigns)
     LOGINFO(" Registering Apps  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
+         string response = evtHandler->getRequestStatus(msgId, 1500);
          convertResultStringToBool(response, status);
     }
     return status;
