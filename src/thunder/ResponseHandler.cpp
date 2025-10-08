@@ -263,10 +263,11 @@ string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
     }
 
     auto future = it->second->promise.get_future();
+    lock.unlock(); // Release lock before waiting
 
     auto status = future.wait_for(std::chrono::milliseconds(timeout));
 
-    lock.lock();
+    lock.lock(); // Reacquire lock after waiting
 
     if (status == std::future_status::ready) {
         try {
