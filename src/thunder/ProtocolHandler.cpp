@@ -291,6 +291,19 @@ bool convertResultStringToBool(const string &jsonMsg, bool &response)
     return status;
 }
 
+// {"jsonrpc":"2.0","id":1044,"result":null}
+bool isJsonRpcResultNull(const string &jsonMsg)
+{
+	Json::Value root;
+	if (!parseJson(jsonMsg, root))
+		return false;
+
+	if (root.isMember("result") && root["result"].isNull())
+		return true;
+
+	return false;
+}
+
 bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response)
 {
 	Json::Value result;

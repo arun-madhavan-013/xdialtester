@@ -23,6 +23,7 @@
 #include <csignal>
 #include <set>
 #include <thread>
+#include "json/json.h"
 
 using namespace std;
 using std::string;
@@ -121,19 +122,33 @@ void SmartMonitor::registerForEvents()
 void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received Controller State Change Event: %s with params: %s", event.c_str(), params.c_str());
+	// here the params contains the entire event data.
+	// {"jsonrpc":"2.0","method":"1030.statechange","params":{"callsign":"Cobalt","reason":"Requested","state":"Activated"}}
+	// extract callsign and state from params
+	Json::Value jParams;
+	if (!parseJson(params, jParams)) {
+		LOGERR("Failed to parse params JSON: %s", params.c_str());
+		return;
+	}
 
-	std::string callsign, state;
-	if (!getValueOfKeyFromJson(params, "callsign", callsign)) {
+	std::string callsign, state, param;
+	callsign = jParams.get("callsign", "").asString();
+	if (callsign.empty()) {
 		LOGERR("Failed to extract callsign from params: %s", params.c_str());
 		return;
+	} else {
+		LOGTRACE("Extracted callsign: %s", callsign.c_str());
 	}
 	// convert callsign Cobalt to YouTube
 	if (callsign == "Cobalt") {
 		callsign = "YouTube";
 	}
-	if (!getValueOfKeyFromJson(params, "state", state)) {
+	state = jParams.get("state", "").asString();
+	if (state.empty()) {
 		LOGERR("Failed to extract state from params: %s", params.c_str());
 		return;
+	} else {
+		LOGTRACE("Extracted state: %s", state.c_str());
 	}
 	std::string dialState = "unknown";
 	std::transform(state.begin(), state.end(), state.begin(), ::tolower);

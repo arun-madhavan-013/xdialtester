@@ -628,7 +628,6 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
 bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
 {
     int id = 0;
-    bool status = false;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     string jsonmsg = sendDeepLinkToJson(dialParams, id);
     LOGINFO(" Deep link request API : %s", jsonmsg.c_str());
@@ -636,7 +635,7 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id);
-        convertResultStringToBool(response, status);
+        return isJsonRpcResultNull(response);
     }
-    return status;
+    return false;
 }
