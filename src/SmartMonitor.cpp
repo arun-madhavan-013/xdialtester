@@ -30,8 +30,6 @@ using std::string;
 
 SmartMonitor *SmartMonitor::_instance = nullptr;
 
-const int THUNDER_TIMEOUT = 2000; // milliseconds
-
 inline const char* dialEventToString(DIALEVENTS event) {
     switch (event) {
         case APP_LAUNCH_REQUEST_EVENT: return "APP_LAUNCH_REQUEST_EVENT";

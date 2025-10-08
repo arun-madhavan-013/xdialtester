@@ -82,77 +82,15 @@ void ResponseHandler::handleEvent()
     }
 
     string eventMsg;
-    string eventName;
     {
         std::unique_lock<std::mutex> lock_guard(m_mtx);
         eventMsg = m_eventQueue[0];
         m_eventQueue.erase(m_eventQueue.begin());
     }
 
-    if (mp_listener == nullptr)
-    {
-        LOGTRACE("No listeners : exit");
-        return;
-    }
-    DialParams dialParams;
-    if (getEventId(eventMsg, eventName))
-    {
-        std::string paramsJson = extractParamsFromJsonRpc(eventMsg);
-        LOGTRACE("Extracted params JSON: %s", paramsJson.c_str());
+    processEvent(eventMsg);
 
-        if (eventName.find("onApplicationHideRequest") != string::npos)
-        {
-            if (getDialEventParams(eventMsg, dialParams))
-                mp_listener->onDialEvents(APP_HIDE_REQUEST_EVENT, dialParams);
-        }
-        else if (eventName.find("onApplicationLaunchRequest") != string::npos)
-        {
-            if (getDialEventParams(eventMsg, dialParams))
-                mp_listener->onDialEvents(APP_LAUNCH_REQUEST_EVENT, dialParams);
-        }
-        else if (eventName.find("onApplicationResumeRequest") != string::npos)
-        {
-            if (getDialEventParams(eventMsg, dialParams))
-                mp_listener->onDialEvents(APP_RESUME_REQUEST_EVENT, dialParams);
-        }
-        else if (eventName.find("onApplicationStopRequest") != string::npos)
-        {
-            if (getDialEventParams(eventMsg, dialParams))
-                mp_listener->onDialEvents(APP_STOP_REQUEST_EVENT, dialParams);
-        }
-        else if (eventName.find("onApplicationStateRequest") != string::npos)
-        {
-            if (getDialEventParams(eventMsg, dialParams))
-                mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
-        }
-		else if (eventName.find("onApplicationActivated") != string::npos ||
-				 eventName.find("onApplicationLaunched") != string::npos ||
-				 eventName.find("onApplicationResumed") != string::npos ||
-				 eventName.find("onApplicationSuspended") != string::npos ||
-				 eventName.find("onApplicationTerminated") != string::npos ||
-				 eventName.find("onDestroyed") != string::npos ||
-				 eventName.find("onLaunched") != string::npos ||
-				 eventName.find("onSuspended") != string::npos ||
-				 eventName.find("onPluginSuspended") != string::npos)
-		{
-			LOGTRACE("Calling onRDKShellEvents with event: %s, params: %s", eventName.c_str(), paramsJson.c_str());
-			mp_listener->onRDKShellEvents(eventName, paramsJson);
-		}
-		else if (eventName.find("statechange") != string::npos)
-		{
-			LOGTRACE("Calling onControllerStateChangeEvents with event: %s, params: %s", eventName.c_str(), paramsJson.c_str());
-			mp_listener->onControllerStateChangeEvents(eventName, paramsJson);
-		}
-		else
-		{
-			LOGERR("Unrecognized event %s ", eventName.c_str());
-		}
-    }
-    else
-    {
-        LOGERR("Event Queue has a non-event message %s", eventMsg.c_str());
-    }
-    LOGINFO(" Exit");
+    LOGTRACE("Exit");
 }
 
 void ResponseHandler::initialize()
