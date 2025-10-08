@@ -22,8 +22,6 @@
 #include <thread>
 
 #include <iostream>
-using std::cout;
-using std::endl;
 
 int TransportHandler::initializeTransport()
 {
@@ -55,21 +53,21 @@ int TransportHandler::initializeTransport()
                                      { processResponse(hdl, msg); });
         m_client.set_close_handler([&, this](websocketpp::connection_hdl hdl)
                                    { disconnected(hdl); });
-        cout << "[TransportHandler::initialize] " << "Connecting to " << m_wsUrl << endl;
+        LOGTRACE("[TransportHandler::initialize] Connecting to %s", m_wsUrl.c_str());
     }
     catch (const std::exception &e)
     {
-        cout << "[TransportHandler::initialize] " << e.what() << endl;
+        LOGERR("[TransportHandler::initialize] %s", e.what());
         status = -1;
     }
     catch (websocketpp::lib::error_code e)
     {
-        cout << "[TransportHandler::initialize] " << e.message() << endl;
+        LOGERR("[TransportHandler::initialize] %s", e.message().c_str());
         status = -2;
     }
     catch (...)
     {
-        cout << "[TransportHandler::initialize] other exception" << endl;
+        LOGERR("[TransportHandler::initialize] other exception");
         status = -3;
     }
     return status;
@@ -90,7 +88,7 @@ void TransportHandler::connect()
 int TransportHandler::sendMessage(std::string message)
 {
     if (tdebug)
-        cout << "[TransportHandler::sendMessage] Sending " << message << endl;
+        LOGTRACE("[TransportHandler::sendMessage] Sending %s", message.c_str());
     if (m_isConnected)
         m_client.send(m_wsHdl, message, websocketpp::frame::opcode::text);
     return m_isConnected ? 1 : -1;
@@ -102,7 +100,7 @@ void TransportHandler::disconnect()
 void TransportHandler::connected(websocketpp::connection_hdl hdl)
 {
     if (tdebug)
-        cout << "[TransportHandler::connected] Connected. Ready to send message" << endl;
+        LOGTRACE("[TransportHandler::connected] Connected. Ready to send message");
     m_wsHdl = hdl;
     m_isConnected = true;
     if (nullptr != m_conHandler)
@@ -111,14 +109,14 @@ void TransportHandler::connected(websocketpp::connection_hdl hdl)
 void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
 {
     if (tdebug)
-        cout << "[TransportHandler::connectFailed] Connection failed..." << endl;
+        LOGERR("[TransportHandler::connectFailed] Connection failed...");
     if (nullptr != m_conHandler)
         m_conHandler(false);
 }
 void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_ptr msg)
 {
     if (tdebug)
-        cout << "[TransportHandler::processResponse] " << msg->get_payload() << endl;
+        LOGTRACE("[TransportHandler::processResponse] %s", msg->get_payload().c_str());
     if (nullptr != m_msgHandler)
         m_msgHandler(msg->get_payload());
 }

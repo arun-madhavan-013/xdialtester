@@ -152,7 +152,7 @@ ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nu
 
 int ThunderInterface::initialize()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     mp_handler->registerConnectionHandler([this](bool isConnected)
                                           { connected(isConnected); });
     mp_handler->registerMessageHandler([this](string message)
@@ -160,13 +160,12 @@ int ThunderInterface::initialize()
 
     ResponseHandler::getInstance()->registerEventListener(this);
     int status = mp_handler->initializeTransport();
-    LOGTRACE(" Exit.");
     return status;
 }
 
 ThunderInterface::~ThunderInterface()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
 
     if (mp_handler->isConnected())
     {
@@ -179,12 +178,12 @@ ThunderInterface::~ThunderInterface()
 }
 void ThunderInterface::setThunderConnectionURL(const std::string &wsurl)
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     mp_handler->setConnectURL(wsurl);
 }
 void ThunderInterface::connectToThunder()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     if (mp_thThread != nullptr)
     {
         // Do we need to join and then delete ?
@@ -197,7 +196,7 @@ void ThunderInterface::connectToThunder()
 
 bool ThunderInterface::enableCasting(bool enable)
 {
-    LOGTRACE("Enter.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
@@ -214,7 +213,7 @@ bool ThunderInterface::enableCasting(bool enable)
 
 bool ThunderInterface::isCastingEnabled(string &result)
 {
-    LOGTRACE("Checking if casting is enabled.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
@@ -231,7 +230,7 @@ bool ThunderInterface::isCastingEnabled(string &result)
 
 bool ThunderInterface::getFriendlyName(std::string &name)
 {
-    LOGTRACE("Getting friendly name.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
@@ -249,7 +248,7 @@ bool ThunderInterface::getFriendlyName(std::string &name)
 
 bool ThunderInterface::setFriendlyName(const std::string &name)
 {
-    LOGTRACE("Setting friendly name.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
@@ -267,7 +266,7 @@ bool ThunderInterface::setFriendlyName(const std::string &name)
 
 bool ThunderInterface::getPluginState(const string &myapp, string &state)
 {
-	LOGTRACE("Getting plugin state.. ");
+	LOGTRACE("%s", __FUNCTION__);
 	bool status = false;
 	int msgId = 0;
 
@@ -305,7 +304,7 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 
 bool ThunderInterface::registerXcastApps(const string &appCallsigns)
 {
-    LOGTRACE("%s", __func__);
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
