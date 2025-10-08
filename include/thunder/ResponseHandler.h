@@ -91,6 +91,7 @@ class ResponseHandler
     void runCleanupLoop();
     void cleanupExpiredRequests();
     void processEvent(const std::string& eventMsg);
+    std::string extractParamsFromJsonRpc(const std::string& jsonRpcMsg);
 
     // Legacy methods (for backward compatibility)
     std::string getRequestStatusLegacy(int msgId, int timeout);

@@ -67,6 +67,8 @@ class ImprovedResponseHandler
     void runEventLoop();
     void runCleanupLoop();
     void cleanupExpiredRequests();
+    void processEvent(const std::string& eventMsg);
+    std::string extractParamsFromJsonRpc(const std::string& jsonRpcMsg);
 
 protected:
     ImprovedResponseHandler() : mp_listener(nullptr), mp_eventThread(nullptr),

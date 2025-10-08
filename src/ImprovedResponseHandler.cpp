@@ -4,6 +4,7 @@
  */
 
 #include "ImprovedResponseHandler.h"
+#include "thunder/ProtocolHandler.h"
 #include <algorithm>
 
 ImprovedResponseHandler* ImprovedResponseHandler::mcp_INSTANCE{nullptr};
@@ -222,6 +223,9 @@ void ImprovedResponseHandler::processEvent(const std::string& eventMsg)
         return;
     }
 
+    // Extract just the params object as JSON string
+    std::string paramsJson = extractParamsFromJsonRpc(eventMsg);
+
     DialParams dialParams;
 
     // Handle DIAL events
@@ -245,7 +249,7 @@ void ImprovedResponseHandler::processEvent(const std::string& eventMsg)
         if (getDialEventParams(eventMsg, dialParams))
             mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
     }
-    // Handle RDKShell events
+    // Handle RDKShell events - pass event name and extracted params JSON
     else if (eventName.find("onApplicationActivated") != std::string::npos ||
              eventName.find("onApplicationLaunched") != std::string::npos ||
              eventName.find("onApplicationResumed") != std::string::npos ||
@@ -255,15 +259,36 @@ void ImprovedResponseHandler::processEvent(const std::string& eventMsg)
              eventName.find("onLaunched") != std::string::npos ||
              eventName.find("onSuspended") != std::string::npos ||
              eventName.find("onPluginSuspended") != std::string::npos) {
-        mp_listener->onRDKShellEvents(eventName, eventMsg);
+        mp_listener->onRDKShellEvents(eventName, paramsJson);
     }
-    // Handle Controller State Change events
+    // Handle Controller State Change events - pass event name and extracted params JSON
     else if (eventName.find("statechange") != std::string::npos) {
-        mp_listener->onControllerStateChangeEvents(eventName, eventMsg);
+        mp_listener->onControllerStateChangeEvents(eventName, paramsJson);
     }
     else {
         LOGERR("Unrecognized event: %s", eventName.c_str());
     }
+}
+
+std::string ImprovedResponseHandler::extractParamsFromJsonRpc(const std::string& jsonRpcMsg)
+{
+    Json::Value root;
+    if (!parseJson(jsonRpcMsg, root)) {
+        LOGERR("Failed to parse JSON-RPC message: %s", jsonRpcMsg.c_str());
+        return "{}"; // Return empty JSON object
+    }
+
+    if (root["params"].isObject()) {
+        // Convert the params object back to string
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+        std::ostringstream os;
+        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+        writer->write(root["params"], &os);
+        return os.str();
+    }
+
+    return "{}"; // Return empty JSON object if no params
 }
 
 void ImprovedResponseHandler::runCleanupLoop()

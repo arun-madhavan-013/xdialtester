@@ -21,7 +21,7 @@
 #include <algorithm>
 #include "ResponseHandler.h"
 #include "EventUtils.h"
-// static bool debug = false;
+
 ResponseHandler *ResponseHandler::mcp_INSTANCE{nullptr};
 
 constexpr std::chrono::seconds ResponseHandler::CLEANUP_INTERVAL;
@@ -35,6 +35,27 @@ ResponseHandler *ResponseHandler::getInstance()
         ResponseHandler::mcp_INSTANCE->initialize();
     }
     return ResponseHandler::mcp_INSTANCE;
+}
+
+std::string ResponseHandler::extractParamsFromJsonRpc(const std::string& jsonRpcMsg)
+{
+    Json::Value root;
+    if (!parseJson(jsonRpcMsg, root)) {
+        LOGERR("Failed to parse JSON-RPC message: %s", jsonRpcMsg.c_str());
+        return "{}"; // Return empty JSON object
+    }
+
+    if (root["params"].isObject()) {
+        // Convert the params object back to string
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+        std::ostringstream os;
+        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+        writer->write(root["params"], &os);
+        return os.str();
+    }
+
+    return "{}"; // Return empty JSON object if no params
 }
 
 void ResponseHandler::handleEvent()
@@ -66,6 +87,9 @@ void ResponseHandler::handleEvent()
     if (getEventId(eventMsg, eventName))
     { // Compare against events
 
+        // Extract just the params object as JSON string for non-DIAL events
+        std::string paramsJson = extractParamsFromJsonRpc(eventMsg);
+
         if (eventName.find("onApplicationHideRequest") != string::npos)
         {
             if (getDialEventParams(eventMsg, dialParams))
@@ -91,7 +115,7 @@ void ResponseHandler::handleEvent()
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
         }
-        // RDKShell events
+        // RDKShell events - pass event name and extracted params JSON
 		else if (eventName.find("onApplicationActivated") != string::npos ||
 				 eventName.find("onApplicationLaunched") != string::npos ||
 				 eventName.find("onApplicationResumed") != string::npos ||
@@ -102,12 +126,12 @@ void ResponseHandler::handleEvent()
 				 eventName.find("onSuspended") != string::npos ||
 				 eventName.find("onPluginSuspended") != string::npos)
 		{
-			mp_listener->onRDKShellEvents(eventName, eventMsg);
+			mp_listener->onRDKShellEvents(eventName, paramsJson);
 		}
-		// Controller State Change events
+		// Controller State Change events - pass event name and extracted params JSON
 		else if (eventName.find("statechange") != string::npos)
 		{
-			mp_listener->onControllerStateChangeEvents(eventName, eventMsg);
+			mp_listener->onControllerStateChangeEvents(eventName, paramsJson);
 		}
 		else
 		{
@@ -221,7 +245,7 @@ string ResponseHandler::getRequestStatusLegacy(int msgId, int timeout)
 
 string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
 {
-    LOGTRACE("Waiting for request id %d with timeout %d ms (improved)", msgId, timeout);
+    LOGTRACE("Waiting for request id %d with timeout %d ms.", msgId, timeout);
 
     std::unique_lock<std::mutex> lock(m_requestMutex);
 
@@ -340,7 +364,7 @@ void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const std::stri
 
 void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const std::string& msg)
 {
-    LOGTRACE("Adding response for id %d (improved)", msgId);
+    LOGTRACE("Adding response for id %d", msgId);
 
     std::lock_guard<std::mutex> lock(m_requestMutex);
 
