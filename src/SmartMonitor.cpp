@@ -32,6 +32,17 @@ SmartMonitor *SmartMonitor::_instance = nullptr;
 
 const int THUNDER_TIMEOUT = 2000; // milliseconds
 
+inline const char* dialEventToString(DIALEVENTS event) {
+    switch (event) {
+        case APP_LAUNCH_REQUEST_EVENT: return "APP_LAUNCH_REQUEST_EVENT";
+        case APP_HIDE_REQUEST_EVENT: return "APP_HIDE_REQUEST_EVENT";
+        case APP_RESUME_REQUEST_EVENT: return "APP_RESUME_REQUEST_EVENT";
+        case APP_STOP_REQUEST_EVENT: return "APP_STOP_REQUEST_EVENT";
+        case APP_STATE_REQUEST_EVENT: return "APP_STATE_REQUEST_EVENT";
+        default: return "UNKNOWN_DIAL_EVENT";
+    }
+}
+
 void SmartMonitor::handleTermSignal(int _signal)
 {
     LOGINFO("Exiting from app..");
@@ -271,7 +282,8 @@ bool SmartMonitor::convertPluginStateToDIALState(const std::string &pluginState,
 
 void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-	LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent,
+	LOGINFO("Received Dial Event: %s (%d) for app: %s with id: %s",
+			dialEventToString(dialEvent), dialEvent,
 			dialParams.appName.c_str(), dialParams.appId.c_str());
 
 	std::string state = "unknown", dialState = "unknown";
@@ -328,7 +340,7 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	} else {
-		LOGERR("Unknown event %d", dialEvent);
+		LOGERR("Unknown event %s (%d)", dialEventToString(dialEvent), dialEvent);
 	}
 }
 
