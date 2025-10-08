@@ -45,6 +45,7 @@ string getThunderMethodToJson(const string &method, int &id);
 string isCastingEnabledToJson(int &);
 string setStandbyBehaviourToJson(int &id);
 bool parseJson(const string &jsonMsg, Json::Value &root);
+bool getParamObjectFromJsonString(const std::string &input, Json::Value &jObjOut);
 bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
 bool convertResultStringToBool(const string &root, bool &);
 bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response);
