@@ -180,8 +180,6 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 	if (validEvents.find(actualEvent) != validEvents.end()) {
 		LOGINFO("Event %s is a valid RDKShell event.", actualEvent.c_str());
 		std::string state = "stopped";
-		// params has the following format: "params": {"client": "org.rdk.Netflix"}
-		// extract client value as appName and set appId as empty string
 		std::string appName;
 		if (!getValueOfKeyFromJson(params, "client", appName)) {
 			LOGERR("Failed to extract client from params: %s", params.c_str());

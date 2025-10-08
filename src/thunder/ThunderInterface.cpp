@@ -570,7 +570,8 @@ bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id, timeout);
-        convertResultStringToBool(response, status);
+        bool retStatus = convertResultStringToBool(response, "success", status);
+        status = retStatus ? status : false;
     }
     return status;
 }

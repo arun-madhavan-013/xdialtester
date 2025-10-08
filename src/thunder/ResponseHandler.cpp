@@ -98,6 +98,7 @@ void ResponseHandler::handleEvent()
     if (getEventId(eventMsg, eventName))
     {
         std::string paramsJson = extractParamsFromJsonRpc(eventMsg);
+        LOGTRACE("Extracted params JSON: %s", paramsJson.c_str());
 
         if (eventName.find("onApplicationHideRequest") != string::npos)
         {
@@ -134,10 +135,12 @@ void ResponseHandler::handleEvent()
 				 eventName.find("onSuspended") != string::npos ||
 				 eventName.find("onPluginSuspended") != string::npos)
 		{
+			LOGTRACE("Calling onRDKShellEvents with event: %s, params: %s", eventName.c_str(), paramsJson.c_str());
 			mp_listener->onRDKShellEvents(eventName, paramsJson);
 		}
 		else if (eventName.find("statechange") != string::npos)
 		{
+			LOGTRACE("Calling onControllerStateChangeEvents with event: %s, params: %s", eventName.c_str(), paramsJson.c_str());
 			mp_listener->onControllerStateChangeEvents(eventName, paramsJson);
 		}
 		else
