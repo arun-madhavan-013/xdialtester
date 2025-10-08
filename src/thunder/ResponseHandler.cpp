@@ -24,6 +24,9 @@
 // static bool debug = false;
 ResponseHandler *ResponseHandler::mcp_INSTANCE{nullptr};
 
+constexpr std::chrono::seconds ResponseHandler::CLEANUP_INTERVAL;
+constexpr std::chrono::seconds ResponseHandler::MAX_REQUEST_AGE;
+
 ResponseHandler *ResponseHandler::getInstance()
 {
     if (ResponseHandler::mcp_INSTANCE == nullptr)
