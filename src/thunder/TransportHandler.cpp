@@ -20,6 +20,9 @@
 #include "TransportHandler.h"
 #include "EventUtils.h"
 #include <thread>
+#include <string>
+#include <memory>
+#include "json/json.h"
 
 #include <iostream>
 
@@ -75,6 +78,12 @@ int TransportHandler::initializeTransport()
 
 void TransportHandler::connect()
 {
+    // Set connecting state
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::CONNECTING);
+    }
+
     // Create a connection to the given URI and queue it for connection once
     // the event loop starts
     websocketpp::lib::error_code ec;
@@ -89,9 +98,11 @@ int TransportHandler::sendMessage(std::string message)
 {
     if (tdebug)
         LOGTRACE("[TransportHandler::sendMessage] Sending %s", message.c_str());
-    if (m_isConnected)
+
+    bool connected = (m_connectionState.load() == ConnectionState::CONNECTED);
+    if (connected)
         m_client.send(m_wsHdl, message, websocketpp::frame::opcode::text);
-    return m_isConnected ? 1 : -1;
+    return connected ? 1 : -1;
 }
 void TransportHandler::disconnect()
 {
@@ -102,7 +113,14 @@ void TransportHandler::connected(websocketpp::connection_hdl hdl)
     if (tdebug)
         LOGTRACE("[TransportHandler::connected] Connected. Ready to send message");
     m_wsHdl = hdl;
-    m_isConnected = true;
+
+    // Update connection state
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::CONNECTED);
+    }
+    m_stateChanged.notify_all();
+
     if (nullptr != m_conHandler)
         m_conHandler(true);
 }
@@ -110,6 +128,14 @@ void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
 {
     if (tdebug)
         LOGERR("[TransportHandler::connectFailed] Connection failed...");
+
+    // Update connection state
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::ERROR_STATE);
+    }
+    m_stateChanged.notify_all();
+
     if (nullptr != m_conHandler)
         m_conHandler(false);
 }
@@ -117,12 +143,64 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
 {
     if (tdebug)
         LOGTRACE("[TransportHandler::processResponse] %s", msg->get_payload().c_str());
-    if (nullptr != m_msgHandler)
-        m_msgHandler(msg->get_payload());
+
+    // Parse JSON to determine message type
+    Json::Value message;
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    std::string errors;
+
+    std::string payload = msg->get_payload();
+    bool parsingSuccessful = reader->parse(
+        payload.c_str(),
+        payload.c_str() + payload.size(),
+        &message,
+        &errors);
+
+    if (parsingSuccessful) {
+        if (message.isMember("id")) {
+            // This is a response to a request - forward to response handler
+            if (nullptr != m_msgHandler) {
+                m_msgHandler(msg->get_payload());
+            }
+        } else if (message.isMember("method")) {
+            // This is a notification/event - forward to event handler
+            if (nullptr != m_eventHandler) {
+                m_eventHandler(message);
+            }
+            if (tdebug) {
+                LOGTRACE("[TransportHandler::processResponse] Event notification: %s",
+                        message.get("method", "unknown").asString().c_str());
+            }
+        } else {
+            // Unknown message format
+            if (tdebug) {
+                LOGERR("[TransportHandler::processResponse] Unknown message format: %s",
+                       msg->get_payload().c_str());
+            }
+        }
+    } else {
+        // JSON parsing failed
+        if (tdebug) {
+            LOGERR("[TransportHandler::processResponse] JSON parsing failed: %s", errors.c_str());
+        }
+        // Fall back to original behavior for non-JSON messages
+        if (nullptr != m_msgHandler) {
+            m_msgHandler(msg->get_payload());
+        }
+    }
 }
 void TransportHandler::disconnected(websocketpp::connection_hdl hdl)
 {
-    m_isConnected = false;
+    // Update connection state
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::DISCONNECTED);
+    }
+    m_stateChanged.notify_all();
+
+    if (tdebug)
+        LOGTRACE("[TransportHandler::disconnected] Connection closed");
 }
 void TransportHandler::registerConnectionHandler(std::function<void(bool)> callback)
 {
@@ -131,4 +209,19 @@ void TransportHandler::registerConnectionHandler(std::function<void(bool)> callb
 void TransportHandler::registerMessageHandler(std::function<void(const std::string)> callback)
 {
     m_msgHandler = callback;
+}
+
+void TransportHandler::registerEventHandler(EventCallback callback)
+{
+    m_eventHandler = callback;
+}
+
+bool TransportHandler::waitForConnection(std::chrono::milliseconds timeout)
+{
+    std::unique_lock<std::mutex> lock(m_stateMutex);
+
+    return m_stateChanged.wait_for(lock, timeout, [this]() {
+        ConnectionState state = m_connectionState.load();
+        return state == ConnectionState::CONNECTED || state == ConnectionState::ERROR_STATE;
+    });
 }
