@@ -290,6 +290,25 @@ bool convertResultStringToBool(const string &jsonMsg, bool &response)
     }
     return status;
 }
+
+bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response)
+{
+	Json::Value result;
+	bool status = false;
+
+	if (!getResultObject(jsonMsg, result))
+		return status;
+
+	Json::Value bstat = result[key];
+
+	if (bstat.isBool())
+	{
+		response = bstat.asBool();
+		status = true;
+	}
+	return status;
+}
+
 /*
     Expecting some thing like
     {"jsonrpc":"2.0","id":1001,"result":0}

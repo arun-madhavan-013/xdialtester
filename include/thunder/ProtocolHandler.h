@@ -47,6 +47,7 @@ string setStandbyBehaviourToJson(int &id);
 bool parseJson(const string &jsonMsg, Json::Value &root);
 bool convertResultStringToArray(const string &root, const string key, vector<string> &arr);
 bool convertResultStringToBool(const string &root, bool &);
+bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response);
 bool convertEventSubResponseToInt(const string &root, int &);
 bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value);
 string getClientListToJson(int &id);

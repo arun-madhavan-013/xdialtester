@@ -255,7 +255,8 @@ bool ThunderInterface::setFriendlyName(const std::string &name)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId);
-        convertResultStringToBool(response, status);
+        bool retstat = convertResultStringToBool(response, "success", status);
+        status = retstat ? status : false;
     }
     return status;
 }
