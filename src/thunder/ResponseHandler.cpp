@@ -304,7 +304,7 @@ void ResponseHandler::shutdown()
 
     LOGTRACE("Exit");
 }
-void ResponseHandler::addMessageToResponseQueue(int msgId, const string msg)
+void ResponseHandler::addMessageToResponseQueue(int msgId, const std::string& msg)
 {
     if (m_useImprovedLogic) {
         addMessageToResponseQueueImproved(msgId, msg);
@@ -313,7 +313,7 @@ void ResponseHandler::addMessageToResponseQueue(int msgId, const string msg)
     }
 }
 
-void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const string& msg)
+void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const std::string& msg)
 {
     LOGTRACE("Enter");
 
@@ -335,7 +335,7 @@ void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const string& m
     m_cv.notify_all();
 }
 
-void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const string& msg)
+void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const std::string& msg)
 {
     LOGTRACE("Adding response for id %d (improved)", msgId);
 
@@ -363,7 +363,7 @@ void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const string&
         LOGTRACE("Late response for id %d - no pending request found", msgId);
     }
 }
-void ResponseHandler::addMessageToEventQueue(const string msg)
+void ResponseHandler::addMessageToEventQueue(const std::string& msg)
 {
     LOGTRACE("Adding event to queue");
 

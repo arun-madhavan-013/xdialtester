@@ -68,7 +68,7 @@ class ResponseHandler
 
     // Separate mutexes for better concurrency
     std::mutex m_mtx;              // Legacy mutex (kept for compatibility)
-    std::mutex m_requestMutex;     // For request/response operations
+    mutable std::mutex m_requestMutex;     // For request/response operations (mutable for const methods)
     std::mutex m_eventMutex;       // For event queue operations
 
     // Separate condition variables
