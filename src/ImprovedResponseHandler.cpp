@@ -6,6 +6,9 @@
 #include "ImprovedResponseHandler.h"
 #include "thunder/ProtocolHandler.h"
 #include <algorithm>
+#include <sstream>
+#include <memory>
+#include "json/json.h"
 
 ImprovedResponseHandler* ImprovedResponseHandler::mcp_INSTANCE{nullptr};
 
@@ -273,17 +276,27 @@ void ImprovedResponseHandler::processEvent(const std::string& eventMsg)
 std::string ImprovedResponseHandler::extractParamsFromJsonRpc(const std::string& jsonRpcMsg)
 {
     Json::Value root;
-    if (!parseJson(jsonRpcMsg, root)) {
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    std::string errs;
+
+    bool parsingSuccessful = reader->parse(
+        jsonRpcMsg.c_str(),
+        jsonRpcMsg.c_str() + jsonRpcMsg.size(),
+        &root,
+        &errs);
+
+    if (!parsingSuccessful) {
         LOGERR("Failed to parse JSON-RPC message: %s", jsonRpcMsg.c_str());
         return "{}"; // Return empty JSON object
     }
 
     if (root["params"].isObject()) {
         // Convert the params object back to string
-        Json::StreamWriterBuilder builder;
-        builder["indentation"] = "";
+        Json::StreamWriterBuilder writerBuilder;
+        writerBuilder["indentation"] = "";
         std::ostringstream os;
-        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+        std::unique_ptr<Json::StreamWriter> writer(writerBuilder.newStreamWriter());
         writer->write(root["params"], &os);
         return os.str();
     }

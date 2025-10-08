@@ -34,7 +34,6 @@ typedef websocketpp::client<websocketpp::config::asio_client> wsclient;
 // Pointer to response
 typedef websocketpp::config::asio_client::message_type::ptr message_ptr;
 
-// Connection state enum following ThunderJS patterns
 enum class ConnectionState {
     DISCONNECTED,
     CONNECTING,
@@ -52,15 +51,12 @@ class TransportHandler
     websocketpp::connection_hdl m_wsHdl;
     wsclient m_client;
 
-    // Enhanced connection state management
     std::atomic<ConnectionState> m_connectionState{ConnectionState::DISCONNECTED};
     std::mutex m_stateMutex;
     std::condition_variable m_stateChanged;
 
-    // Request ID generation
     std::atomic<uint32_t> m_requestIdCounter{1};
 
-    // Callback handlers
     std::function<void(bool)> m_conHandler;
     std::function<void(std::string)> m_msgHandler;
     EventCallback m_eventHandler;
@@ -79,7 +75,6 @@ public:
         return m_wsUrl;
     }
 
-    // Enhanced connection state methods
     bool isConnected()
     {
         return m_connectionState.load() == ConnectionState::CONNECTED;
@@ -90,13 +85,11 @@ public:
         return m_connectionState.load();
     }
 
-    // Request ID generation
     std::string generateRequestId()
     {
         return std::to_string(m_requestIdCounter.fetch_add(1));
     }
 
-    // Wait for connection with timeout
     bool waitForConnection(std::chrono::milliseconds timeout);
 
     int initializeTransport();

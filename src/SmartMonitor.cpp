@@ -121,8 +121,7 @@ void SmartMonitor::registerForEvents()
 void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received Controller State Change Event: %s with params: %s", event.c_str(), params.c_str());
-	// INFO [SmartMonitor.cpp:123] onControllerStateChangeEvent: Received Controller State Change Event: 1030.statechange with params: {"jsonrpc":"2.0","method":"1030.statechange","params":{"callsign":"Cobalt","state":"Activated","reason":"Shutdown"}}
-	// extract callsign and state from params
+
 	std::string callsign, state;
 	if (!getValueOfKeyFromJson(params, "callsign", callsign)) {
 		LOGERR("Failed to extract callsign from params: %s", params.c_str());

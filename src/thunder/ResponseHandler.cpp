@@ -19,8 +19,12 @@
 
 #include <chrono>
 #include <algorithm>
+#include <sstream>
+#include <memory>
+#include "json/json.h"
 #include "ResponseHandler.h"
 #include "EventUtils.h"
+#include "ProtocolHandler.h"
 
 ResponseHandler *ResponseHandler::mcp_INSTANCE{nullptr};
 
@@ -40,28 +44,36 @@ ResponseHandler *ResponseHandler::getInstance()
 std::string ResponseHandler::extractParamsFromJsonRpc(const std::string& jsonRpcMsg)
 {
     Json::Value root;
-    if (!parseJson(jsonRpcMsg, root)) {
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    std::string errs;
+
+    bool parsingSuccessful = reader->parse(
+        jsonRpcMsg.c_str(),
+        jsonRpcMsg.c_str() + jsonRpcMsg.size(),
+        &root,
+        &errs);
+
+    if (!parsingSuccessful) {
         LOGERR("Failed to parse JSON-RPC message: %s", jsonRpcMsg.c_str());
-        return "{}"; // Return empty JSON object
+        return "{}";
     }
 
     if (root["params"].isObject()) {
-        // Convert the params object back to string
-        Json::StreamWriterBuilder builder;
-        builder["indentation"] = "";
+        Json::StreamWriterBuilder writerBuilder;
+        writerBuilder["indentation"] = "";
         std::ostringstream os;
-        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+        std::unique_ptr<Json::StreamWriter> writer(writerBuilder.newStreamWriter());
         writer->write(root["params"], &os);
         return os.str();
     }
 
-    return "{}"; // Return empty JSON object if no params
+    return "{}";
 }
 
 void ResponseHandler::handleEvent()
 {
     LOGTRACE("Enter");
-    // Get the first event, then go back.
 
     if (m_eventQueue.empty())
     {
@@ -71,7 +83,6 @@ void ResponseHandler::handleEvent()
 
     string eventMsg;
     string eventName;
-    // Limit mutex lifetime.
     {
         std::unique_lock<std::mutex> lock_guard(m_mtx);
         eventMsg = m_eventQueue[0];
@@ -85,9 +96,7 @@ void ResponseHandler::handleEvent()
     }
     DialParams dialParams;
     if (getEventId(eventMsg, eventName))
-    { // Compare against events
-
-        // Extract just the params object as JSON string for non-DIAL events
+    {
         std::string paramsJson = extractParamsFromJsonRpc(eventMsg);
 
         if (eventName.find("onApplicationHideRequest") != string::npos)
@@ -115,7 +124,6 @@ void ResponseHandler::handleEvent()
             if (getDialEventParams(eventMsg, dialParams))
                 mp_listener->onDialEvents(APP_STATE_REQUEST_EVENT, dialParams);
         }
-        // RDKShell events - pass event name and extracted params JSON
 		else if (eventName.find("onApplicationActivated") != string::npos ||
 				 eventName.find("onApplicationLaunched") != string::npos ||
 				 eventName.find("onApplicationResumed") != string::npos ||
@@ -128,7 +136,6 @@ void ResponseHandler::handleEvent()
 		{
 			mp_listener->onRDKShellEvents(eventName, paramsJson);
 		}
-		// Controller State Change events - pass event name and extracted params JSON
 		else if (eventName.find("statechange") != string::npos)
 		{
 			mp_listener->onControllerStateChangeEvents(eventName, paramsJson);
@@ -137,7 +144,7 @@ void ResponseHandler::handleEvent()
 		{
 			LOGERR("Unrecognized event %s ", eventName.c_str());
 		}
-    } // Here end if(getEventId(eventMsg,eventName))
+    }
     else
     {
         LOGERR("Event Queue has a non-event message %s", eventMsg.c_str());
@@ -157,29 +164,22 @@ void ResponseHandler::initialize()
 void ResponseHandler::runEventLoop()
 {
     if (m_useImprovedLogic) {
-        // Improved event loop with separate mutex for events
         while (m_runLoop) {
             std::unique_lock<std::mutex> lock(m_eventMutex);
-
-            // Wait for events
             m_eventCV.wait(lock, [this] { return !m_eventQueue.empty() || !m_runLoop; });
 
             if (!m_runLoop) break;
 
             if (!m_eventQueue.empty()) {
-                // Process all queued events
                 auto events = std::move(m_eventQueue);
                 m_eventQueue.clear();
                 lock.unlock();
-
-                // Process events without holding lock
                 for (const auto& event : events) {
                     processEvent(event);
                 }
             }
         }
     } else {
-        // Legacy event loop
         while (m_runLoop) {
             if (m_eventQueue.empty()) {
                 std::unique_lock<std::mutex> lock_guard(m_mtx);
@@ -193,6 +193,7 @@ void ResponseHandler::runEventLoop()
     }
     LOGTRACE("Exit");
 }
+
 string ResponseHandler::getRequestStatus(int msgId, int timeout)
 {
     if (m_useImprovedLogic) {
@@ -238,7 +239,6 @@ string ResponseHandler::getRequestStatusLegacy(int msgId, int timeout)
         LOGTRACE("Request timed out... %d ", msgId);
         m_purgableIds.push_back(msgId);
     }
-    // Two threads are competing for event notification. Let us update the other one.
     m_cv.notify_all();
     return response;
 }
@@ -249,7 +249,6 @@ string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
 
     std::unique_lock<std::mutex> lock(m_requestMutex);
 
-    // Check if request already exists and is completed
     auto it = m_pendingRequests.find(msgId);
     if (it != m_pendingRequests.end()) {
         if (it->second->state == RequestState::COMPLETED) {
@@ -258,22 +257,18 @@ string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
             return response;
         }
     } else {
-        // Create new request context
         auto context = std::make_unique<RequestContext>(msgId);
         m_pendingRequests[msgId] = std::move(context);
         it = m_pendingRequests.find(msgId);
     }
 
-    // Wait for response with timeout
     auto future = it->second->promise.get_future();
-    lock.unlock(); // Release lock while waiting
 
     auto status = future.wait_for(std::chrono::milliseconds(timeout));
 
-    lock.lock(); // Reacquire lock
+    lock.lock();
 
     if (status == std::future_status::ready) {
-        // Response received
         try {
             std::string response = future.get();
             m_pendingRequests.erase(msgId);
@@ -282,26 +277,21 @@ string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
             LOGERR("Exception getting response for id %d: %s", msgId, e.what());
         }
     } else {
-        // Timeout occurred
         LOGTRACE("Request %d timed out", msgId);
         auto it = m_pendingRequests.find(msgId);
         if (it != m_pendingRequests.end()) {
             it->second->state = RequestState::TIMEOUT;
-            // Don't erase immediately - let cleanup thread handle it
         }
     }
 
-    return ""; // Empty response indicates timeout or error
+    return "";
 }
 void ResponseHandler::shutdown()
 {
     LOGTRACE("Enter");
-
-    // Signal shutdown
     m_runLoop = false;
 
     if (m_useImprovedLogic) {
-        // Wake up all waiting threads
         {
             std::lock_guard<std::mutex> lock(m_requestMutex);
             m_requestCV.notify_all();
@@ -311,7 +301,6 @@ void ResponseHandler::shutdown()
             m_eventCV.notify_all();
         }
 
-        // Wait for cleanup thread
         if (mp_cleanupThread && mp_cleanupThread->joinable()) {
             mp_cleanupThread->join();
             delete mp_cleanupThread;
@@ -322,7 +311,6 @@ void ResponseHandler::shutdown()
         m_cv.notify_all();
     }
 
-    // Wait for event thread
     if (mp_thandle && mp_thandle->joinable()) {
         mp_thandle->join();
         delete mp_thandle;
@@ -344,7 +332,7 @@ void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const std::stri
 {
     LOGTRACE("Enter");
 
-    if (!m_purgableIds.empty()) // find on empty vector cause core dump
+    if (!m_purgableIds.empty())
     {
         auto index = std::find(m_purgableIds.begin(), m_purgableIds.end(), msgId);
         if (index != m_purgableIds.end())
@@ -370,12 +358,9 @@ void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const std::st
 
     auto it = m_pendingRequests.find(msgId);
     if (it != m_pendingRequests.end()) {
-        // Found pending request
         if (it->second->state == RequestState::PENDING) {
             it->second->response = msg;
             it->second->state = RequestState::COMPLETED;
-
-            // Fulfill the promise to wake up waiters
             try {
                 it->second->promise.set_value(msg);
             } catch (const std::exception& e) {
@@ -386,7 +371,6 @@ void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const std::st
                     msgId, static_cast<int>(it->second->state));
         }
     } else {
-        // No pending request - this is a late response
         LOGTRACE("Late response for id %d - no pending request found", msgId);
     }
 }
@@ -406,12 +390,12 @@ void ResponseHandler::addMessageToEventQueue(const std::string& msg)
 
     LOGTRACE("Added event to queue");
 }
+
 void ResponseHandler::connectionEvent(bool connected)
 {
     // This needs to be revisited.
 }
 
-// New improved methods
 std::future<std::string> ResponseHandler::getRequestAsync(int msgId)
 {
     std::lock_guard<std::mutex> lock(m_requestMutex);
@@ -420,8 +404,6 @@ std::future<std::string> ResponseHandler::getRequestAsync(int msgId)
     if (it != m_pendingRequests.end()) {
         return it->second->promise.get_future();
     }
-
-    // Create new request context
     auto context = std::make_unique<RequestContext>(msgId);
     auto future = context->promise.get_future();
     m_pendingRequests[msgId] = std::move(context);
@@ -436,7 +418,6 @@ bool ResponseHandler::cancelRequest(int msgId)
     auto it = m_pendingRequests.find(msgId);
     if (it != m_pendingRequests.end() && it->second->state == RequestState::PENDING) {
         it->second->state = RequestState::CANCELLED;
-        // Fulfill promise with empty response to unblock waiters
         try {
             it->second->promise.set_value("");
         } catch (const std::exception& e) {
@@ -537,10 +518,9 @@ void ResponseHandler::cleanupExpiredRequests()
                     std::chrono::duration_cast<std::chrono::seconds>(age).count(),
                     static_cast<int>(it->second->state));
 
-            // Fulfill promise if still pending to unblock any waiters
             if (it->second->state == RequestState::PENDING) {
                 try {
-                    it->second->promise.set_value(""); // Empty response for cleanup
+                    it->second->promise.set_value("");
                 } catch (const std::exception& e) {
                     // Promise might already be fulfilled
                 }

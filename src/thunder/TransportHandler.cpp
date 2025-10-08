@@ -78,19 +78,15 @@ int TransportHandler::initializeTransport()
 
 void TransportHandler::connect()
 {
-    // Set connecting state
     {
         std::lock_guard<std::mutex> lock(m_stateMutex);
         m_connectionState.store(ConnectionState::CONNECTING);
     }
 
-    // Create a connection to the given URI and queue it for connection once
-    // the event loop starts
     websocketpp::lib::error_code ec;
     wsclient::connection_ptr con = m_client.get_connection(m_wsUrl, ec);
     m_client.connect(con);
 
-    // Start the ASIO io_service run loop
     m_client.run();
 }
 
@@ -114,7 +110,6 @@ void TransportHandler::connected(websocketpp::connection_hdl hdl)
         LOGTRACE("[TransportHandler::connected] Connected. Ready to send message");
     m_wsHdl = hdl;
 
-    // Update connection state
     {
         std::lock_guard<std::mutex> lock(m_stateMutex);
         m_connectionState.store(ConnectionState::CONNECTED);
@@ -129,7 +124,6 @@ void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
     if (tdebug)
         LOGERR("[TransportHandler::connectFailed] Connection failed...");
 
-    // Update connection state
     {
         std::lock_guard<std::mutex> lock(m_stateMutex);
         m_connectionState.store(ConnectionState::ERROR_STATE);
@@ -144,7 +138,6 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
     if (tdebug)
         LOGTRACE("[TransportHandler::processResponse] %s", msg->get_payload().c_str());
 
-    // Parse JSON to determine message type
     Json::Value message;
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
@@ -159,12 +152,10 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
 
     if (parsingSuccessful) {
         if (message.isMember("id")) {
-            // This is a response to a request - forward to response handler
             if (nullptr != m_msgHandler) {
                 m_msgHandler(msg->get_payload());
             }
         } else if (message.isMember("method")) {
-            // This is a notification/event - forward to event handler
             if (nullptr != m_eventHandler) {
                 m_eventHandler(message);
             }
@@ -173,18 +164,15 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
                         message.get("method", "unknown").asString().c_str());
             }
         } else {
-            // Unknown message format
             if (tdebug) {
                 LOGERR("[TransportHandler::processResponse] Unknown message format: %s",
                        msg->get_payload().c_str());
             }
         }
     } else {
-        // JSON parsing failed
         if (tdebug) {
             LOGERR("[TransportHandler::processResponse] JSON parsing failed: %s", errors.c_str());
         }
-        // Fall back to original behavior for non-JSON messages
         if (nullptr != m_msgHandler) {
             m_msgHandler(msg->get_payload());
         }
@@ -192,7 +180,6 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
 }
 void TransportHandler::disconnected(websocketpp::connection_hdl hdl)
 {
-    // Update connection state
     {
         std::lock_guard<std::mutex> lock(m_stateMutex);
         m_connectionState.store(ConnectionState::DISCONNECTED);
