@@ -83,7 +83,7 @@ void ResponseHandler::handleEvent()
 
     string eventMsg;
     {
-        std::unique_lock<std::mutex> lock_guard(m_mtx);
+        std::lock_guard<std::mutex> lock(m_eventMutex);
         eventMsg = m_eventQueue[0];
         m_eventQueue.erase(m_eventQueue.begin());
     }
@@ -96,39 +96,23 @@ void ResponseHandler::handleEvent()
 void ResponseHandler::initialize()
 {
     mp_thandle = new std::thread([this] { runEventLoop(); });
-
-    if (m_useImprovedLogic) {
-        mp_cleanupThread = new std::thread([this] { runCleanupLoop(); });
-    }
+    mp_cleanupThread = new std::thread([this] { runCleanupLoop(); });
 }
 
 void ResponseHandler::runEventLoop()
 {
-    if (m_useImprovedLogic) {
-        while (m_runLoop) {
-            std::unique_lock<std::mutex> lock(m_eventMutex);
-            m_eventCV.wait(lock, [this] { return !m_eventQueue.empty() || !m_runLoop; });
+    while (m_runLoop) {
+        std::unique_lock<std::mutex> lock(m_eventMutex);
+        m_eventCV.wait(lock, [this] { return !m_eventQueue.empty() || !m_runLoop; });
 
-            if (!m_runLoop) break;
+        if (!m_runLoop) break;
 
-            if (!m_eventQueue.empty()) {
-                auto events = std::move(m_eventQueue);
-                m_eventQueue.clear();
-                lock.unlock();
-                for (const auto& event : events) {
-                    processEvent(event);
-                }
-            }
-        }
-    } else {
-        while (m_runLoop) {
-            if (m_eventQueue.empty()) {
-                std::unique_lock<std::mutex> lock_guard(m_mtx);
-                m_cv.wait(lock_guard);
-            }
-            if (!m_eventQueue.empty()) {
-                handleEvent();
-                m_cv.notify_all();
+        if (!m_eventQueue.empty()) {
+            auto events = std::move(m_eventQueue);
+            m_eventQueue.clear();
+            lock.unlock();
+            for (const auto& event : events) {
+                processEvent(event);
             }
         }
     }
@@ -136,55 +120,6 @@ void ResponseHandler::runEventLoop()
 }
 
 string ResponseHandler::getRequestStatus(int msgId, int timeout)
-{
-    if (m_useImprovedLogic) {
-        return getRequestStatusImproved(msgId, timeout);
-    } else {
-        return getRequestStatusLegacy(msgId, timeout);
-    }
-}
-
-string ResponseHandler::getRequestStatusLegacy(int msgId, int timeout)
-{
-    string response;
-    LOGTRACE("Waiting for id %d with timeout %d", msgId, timeout);
-    dumpMap(m_msgMap);
-
-    std::unique_lock<std::mutex> lock_guard(m_mtx);
-    auto now = std::chrono::system_clock::now();
-    if (m_msgMap.find(msgId) != m_msgMap.end())
-    {
-        response = m_msgMap[msgId];
-        m_msgMap.erase(msgId);
-    }
-    else if (m_cv.wait_until(lock_guard, now + std::chrono::milliseconds(timeout)) != std::cv_status::timeout)
-    {
-        if (debug)
-        {
-            dumpMap(m_msgMap);
-        }
-
-        if (m_msgMap.find(msgId) != m_msgMap.end())
-        {
-            response = m_msgMap[msgId];
-            m_msgMap.erase(msgId);
-        }
-        else
-        {
-            m_purgableIds.push_back(msgId);
-            LOGTRACE("Unable to match any response");
-        }
-    }
-    else
-    {
-        LOGTRACE("Request timed out... %d ", msgId);
-        m_purgableIds.push_back(msgId);
-    }
-    m_cv.notify_all();
-    return response;
-}
-
-string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
 {
     LOGTRACE("Waiting for request id %d with timeout %d ms.", msgId, timeout);
 
@@ -233,24 +168,19 @@ void ResponseHandler::shutdown()
     LOGTRACE("Enter");
     m_runLoop = false;
 
-    if (m_useImprovedLogic) {
-        {
-            std::lock_guard<std::mutex> lock(m_requestMutex);
-            m_requestCV.notify_all();
-        }
-        {
-            std::lock_guard<std::mutex> lock(m_eventMutex);
-            m_eventCV.notify_all();
-        }
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        m_requestCV.notify_all();
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_eventMutex);
+        m_eventCV.notify_all();
+    }
 
-        if (mp_cleanupThread && mp_cleanupThread->joinable()) {
-            mp_cleanupThread->join();
-            delete mp_cleanupThread;
-            mp_cleanupThread = nullptr;
-        }
-    } else {
-        std::unique_lock<std::mutex> lock_guard(m_mtx);
-        m_cv.notify_all();
+    if (mp_cleanupThread && mp_cleanupThread->joinable()) {
+        mp_cleanupThread->join();
+        delete mp_cleanupThread;
+        mp_cleanupThread = nullptr;
     }
 
     if (mp_thandle && mp_thandle->joinable()) {
@@ -262,37 +192,6 @@ void ResponseHandler::shutdown()
     LOGTRACE("Exit");
 }
 void ResponseHandler::addMessageToResponseQueue(int msgId, const std::string& msg)
-{
-    if (m_useImprovedLogic) {
-        addMessageToResponseQueueImproved(msgId, msg);
-    } else {
-        addMessageToResponseQueueLegacy(msgId, msg);
-    }
-}
-
-void ResponseHandler::addMessageToResponseQueueLegacy(int msgId, const std::string& msg)
-{
-    LOGTRACE("Enter");
-
-    if (!m_purgableIds.empty())
-    {
-        auto index = std::find(m_purgableIds.begin(), m_purgableIds.end(), msgId);
-        if (index != m_purgableIds.end())
-        {
-            if (debug)
-                dumpVector(m_purgableIds);
-            LOGTRACE("Event response arrived late. Discarding %s", msg.c_str());
-            m_purgableIds.erase(index);
-            return;
-        }
-    }
-    LOGTRACE(" Adding to message queue.");
-    std::unique_lock<std::mutex> lock_guard(m_mtx);
-    m_msgMap.emplace(std::make_pair(msgId, msg));
-    m_cv.notify_all();
-}
-
-void ResponseHandler::addMessageToResponseQueueImproved(int msgId, const std::string& msg)
 {
     LOGTRACE("Adding response for id %d", msgId);
 
@@ -320,15 +219,9 @@ void ResponseHandler::addMessageToEventQueue(const std::string& msg)
 {
     LOGTRACE("Adding event to queue");
 
-    if (m_useImprovedLogic) {
-        std::lock_guard<std::mutex> lock(m_eventMutex);
-        m_eventQueue.emplace_back(msg);
-        m_eventCV.notify_one();
-    } else {
-        std::unique_lock<std::mutex> lock_guard(m_mtx);
-        m_eventQueue.emplace_back(msg);
-        m_cv.notify_all();
-    }
+    std::lock_guard<std::mutex> lock(m_eventMutex);
+    m_eventQueue.emplace_back(msg);
+    m_eventCV.notify_one();
 
     LOGTRACE("Added event to queue");
 }

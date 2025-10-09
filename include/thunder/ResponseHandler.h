@@ -33,7 +33,7 @@
 #include "EventUtils.h"
 #include "EventListener.h"
 
-// Request state tracking for improved architecture
+// Request state tracking
 enum class RequestState {
     PENDING,
     COMPLETED,
@@ -57,22 +57,16 @@ class ResponseHandler
 {
     static ResponseHandler *mcp_INSTANCE;
 
-    // Legacy data structures (for backward compatibility)
-    std::vector<int> m_purgableIds;
+    // Data structures
     std::vector<std::string> m_eventQueue;
-    std::map<int, std::string> m_msgMap;
-
-    // Improved data structures
     std::unordered_map<int, std::unique_ptr<RequestContext>> m_pendingRequests;
     std::unordered_set<int> m_completedRequests;
 
-    // Separate mutexes for better concurrency
-    std::mutex m_mtx;              // Legacy mutex (kept for compatibility)
+    // Mutexes for thread safety
     mutable std::mutex m_requestMutex;     // For request/response operations (mutable for const methods)
     std::mutex m_eventMutex;       // For event queue operations
 
-    // Separate condition variables
-    std::condition_variable m_cv;        // Legacy CV
+    // Condition variables
     std::condition_variable m_requestCV; // For request/response notifications
     std::condition_variable m_eventCV;   // For event notifications
 
@@ -80,7 +74,6 @@ class ResponseHandler
     std::thread *mp_cleanupThread;
 
     bool m_runLoop;
-    bool m_useImprovedLogic;  // Feature flag
     EventListener *mp_listener;
 
     // Configuration
@@ -93,17 +86,13 @@ class ResponseHandler
     void processEvent(const std::string& eventMsg);
     std::string extractParamsFromJsonRpc(const std::string& jsonRpcMsg);
 
-    // Legacy methods (for backward compatibility)
-    std::string getRequestStatusLegacy(int msgId, int timeout);
-    void addMessageToResponseQueueLegacy(int msgId, const std::string& msg);
-
-    // Improved methods
-    std::string getRequestStatusImproved(int msgId, int timeout);
-    void addMessageToResponseQueueImproved(int msgId, const std::string& msg);
+    // Core methods
+    std::string getRequestStatus(int msgId, int timeout);
+    void addMessageToResponseQueue(int msgId, const std::string& msg);
 
 protected:
     ResponseHandler() : mp_thandle(nullptr), mp_cleanupThread(nullptr), m_runLoop(true),
-                       m_useImprovedLogic(true), mp_listener(nullptr) {}
+                       mp_listener(nullptr) {}
     ~ResponseHandler() {}
 
 public:
@@ -117,7 +106,7 @@ public:
     void connectionEvent(bool connected);
     std::string getRequestStatus(int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
 
-    // New improved methods
+    // Async operations
     std::future<std::string> getRequestAsync(int msgId);
     bool cancelRequest(int msgId);
 
@@ -125,10 +114,6 @@ public:
     size_t getPendingRequestCount() const;
     size_t getCompletedRequestCount() const;
     void clearCompletedRequests();
-
-    // Feature toggle
-    void setUseImprovedLogic(bool enable) { m_useImprovedLogic = enable; }
-    bool isUsingImprovedLogic() const { return m_useImprovedLogic; }
 
     void registerEventListener(EventListener *listener) {
         mp_listener = listener;
