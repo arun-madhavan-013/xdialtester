@@ -23,16 +23,28 @@
 #include <csignal>
 #include <set>
 #include <thread>
+#include "json/json.h"
 
 using namespace std;
 using std::string;
 
 SmartMonitor *SmartMonitor::_instance = nullptr;
 
-const int THUNDER_TIMEOUT = 2000; // milliseconds
+inline const char* dialEventToString(DIALEVENTS event) {
+    switch (event) {
+        case APP_LAUNCH_REQUEST_EVENT: return "APP_LAUNCH_REQUEST_EVENT";
+        case APP_HIDE_REQUEST_EVENT: return "APP_HIDE_REQUEST_EVENT";
+        case APP_RESUME_REQUEST_EVENT: return "APP_RESUME_REQUEST_EVENT";
+        case APP_STOP_REQUEST_EVENT: return "APP_STOP_REQUEST_EVENT";
+        case APP_STATE_REQUEST_EVENT: return "APP_STATE_REQUEST_EVENT";
+        default: return "UNKNOWN_DIAL_EVENT";
+    }
+}
 
 void SmartMonitor::handleTermSignal(int _signal)
 {
+    (void)_signal;
+
     LOGINFO("Exiting from app..");
 
     unique_lock<std::mutex> ulock(m_lock);
@@ -121,25 +133,38 @@ void SmartMonitor::registerForEvents()
 void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received Controller State Change Event: %s with params: %s", event.c_str(), params.c_str());
-	// INFO [SmartMonitor.cpp:123] onControllerStateChangeEvent: Received Controller State Change Event: 1030.statechange with params: {"jsonrpc":"2.0","method":"1030.statechange","params":{"callsign":"Cobalt","state":"Activated","reason":"Shutdown"}}
-	// extract callsign and state from params
+	// INFO [SmartMonitor.cpp:124] onControllerStateChangeEvent: Received Controller State Change Event: 1030.statechange with params: {"jsonrpc":"2.0","method":"1030.statechange","params":{"callsign":"Cobalt","reason":"Requested","state":"Activated"}}
 	std::string callsign, state;
-	if (!getValueOfKeyFromJson(params, "callsign", callsign)) {
-		LOGERR("Failed to extract callsign from params: %s", params.c_str());
+
+	Json::Value jParams;
+	if (!getParamObjectFromJsonString(params, jParams)) {
 		return;
 	}
+
+	callsign = jParams.get("callsign", "").asString();
+	if (callsign.empty()) {
+		LOGERR("Failed to extract callsign from nested params: %s", params.c_str());
+		return;
+	} else {
+		LOGTRACE("Extracted callsign: %s", callsign.c_str());
+	}
+
+	state = jParams.get("state", "").asString();
+	if (state.empty()) {
+		LOGERR("Failed to extract state from nested params: %s", params.c_str());
+		return;
+	} else {
+		LOGTRACE("Extracted state: %s", state.c_str());
+	}
+
 	// convert callsign Cobalt to YouTube
 	if (callsign == "Cobalt") {
 		callsign = "YouTube";
 	}
-	if (!getValueOfKeyFromJson(params, "state", state)) {
-		LOGERR("Failed to extract state from params: %s", params.c_str());
-		return;
-	}
+
 	std::string dialState = "unknown";
 	std::transform(state.begin(), state.end(), state.begin(), ::tolower);
 	if (convertPluginStateToDIALState(state, dialState)) {
-		tiface->reportDIALAppState(callsign, "", dialState);
 		// Update the app state in the map
 		for (int i = YOUTUBE; i < APPLIMIT; i++) {
 			if (m_dialApps[i].appName == callsign) {
@@ -158,7 +183,7 @@ void SmartMonitor::onControllerStateChangeEvent(const std::string &event, const 
 void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &params)
 {
 	LOGINFO("Received RDKShell Event: %s with params: %s", event.c_str(), params.c_str());
-
+	// INFO [SmartMonitor.cpp:174] onRDKShellEvent: Received RDKShell Event: 1024.onLaunched with params: {"jsonrpc":"2.0","method":"1024.onLaunched","params":{"client":"Cobalt","launchType":"activate"}}
 	std::string actualEvent = event;
 	size_t dotPos = event.find('.');
 	if (dotPos != std::string::npos) {
@@ -180,16 +205,54 @@ void SmartMonitor::onRDKShellEvent(const std::string &event, const std::string &
 
 	if (validEvents.find(actualEvent) != validEvents.end()) {
 		LOGINFO("Event %s is a valid RDKShell event.", actualEvent.c_str());
-		std::string state = "stopped";
-		// params has the following format: "params": {"client": "org.rdk.Netflix"}
-		// extract client value as appName and set appId as empty string
-		std::string appName;
-		if (!getValueOfKeyFromJson(params, "client", appName)) {
-			LOGERR("Failed to extract client from params: %s", params.c_str());
+
+		Json::Value jParams;
+		if (!getParamObjectFromJsonString(params, jParams)) {
 			return;
 		}
-		if (getPluginState(appName, state)) {
-			tiface->reportDIALAppState(appName, "", state);
+
+		std::string client = jParams.get("client", "").asString();
+		std::string launchType = jParams.get("launchType", "").asString();
+
+		if (client.empty()) {
+			LOGERR("Failed to extract client from nested params: %s", params.c_str());
+			return;
+		} else {
+			LOGTRACE("Extracted client: %s, launchType: %s", client.c_str(), launchType.c_str());
+		}
+
+		// Convert client Cobalt to YouTube
+		std::string appName = client;
+		if (client == "Cobalt") {
+			appName = "YouTube";
+		}
+
+		// Determine state based on event and launch type
+		std::string state = "stopped";
+		if (actualEvent == "onLaunched" || actualEvent == "onApplicationActivated" ||
+			actualEvent == "onApplicationLaunched" || actualEvent == "onApplicationResumed") {
+			state = "running";
+		} else if (actualEvent == "onSuspended" || actualEvent == "onApplicationSuspended" ||
+				   actualEvent == "onPluginSuspended") {
+			state = "suspended";
+		} else if (actualEvent == "onDestroyed" || actualEvent == "onApplicationTerminated") {
+			state = "stopped";
+		}
+
+		LOGINFO("RDKShell event %s for app %s, setting state to %s", actualEvent.c_str(), appName.c_str(), state.c_str());
+
+		// Update the app state in the map
+		for (int i = YOUTUBE; i < APPLIMIT; i++) {
+			if (m_dialApps[i].appName == appName) {
+				m_dialApps[i].pluginState = state;
+				std::string dialState;
+				if (convertPluginStateToDIALState(state, dialState)) {
+					m_dialApps[i].dialState = dialState;
+					LOGINFO("Update App State Cache %s: pluginState=%s, dialState=%s",
+						m_dialApps[i].appName.c_str(), m_dialApps[i].pluginState.c_str(), m_dialApps[i].dialState.c_str());
+				}
+				break;
+			}
 		}
 	} else {
 		LOGINFO("Event %s is not a monitored RDKShell event.", actualEvent.c_str());
@@ -214,12 +277,13 @@ bool SmartMonitor::convertPluginStateToDIALState(const std::string &pluginState,
 		LOGWARN("Unknown plugin state %s received.", pluginState.c_str());
 		status = false;
 	}
-	return status;
+		return status;
 }
 
 void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-	LOGINFO("Received Dial Event: %d for app: %s with id: %s", dialEvent,
+	LOGINFO("Received Dial Event: %s (%d) for app: %s with id: %s",
+			dialEventToString(dialEvent), dialEvent,
 			dialParams.appName.c_str(), dialParams.appId.c_str());
 
 	std::string state = "unknown", dialState = "unknown";
@@ -276,7 +340,7 @@ void SmartMonitor::onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParam
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	} else {
-		LOGERR("Unknown event %d", dialEvent);
+		LOGERR("Unknown event %s (%d)", dialEventToString(dialEvent), dialEvent);
 	}
 }
 
@@ -364,8 +428,6 @@ bool SmartMonitor::checkAndEnableCasting(const string &friendlyname)
 bool SmartMonitor::registerDIALApps(const string &appCallsigns)
 {
     LOGTRACE("Enabling Apps for DIAL casting.. ");
-    bool status = false;
-    string result;
     return tiface->registerXcastApps(appCallsigns);
 }
 
@@ -378,7 +440,5 @@ bool SmartMonitor::getConnectStatus()
 bool SmartMonitor::setStandbyBehaviour()
 {
     LOGTRACE("Enabling standby behaviour as active.. ");
-    bool status = false;
-    string result;
     return tiface->setStandbyBehaviour();
 }

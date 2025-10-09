@@ -23,6 +23,7 @@
 #include <mutex>
 #include <map>
 #include <condition_variable>
+#include "json/json.h"
 // #include "ConfigReader.h"
 #include "thunder/ThunderInterface.h"
 using std::string;

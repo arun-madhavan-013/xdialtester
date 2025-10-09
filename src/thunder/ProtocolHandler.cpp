@@ -241,6 +241,27 @@ bool parseJson(const string &jsonMsg, Json::Value &root)
     return parsingSuccessful;
 }
 
+bool getParamObjectFromJsonString(const std::string &input, Json::Value &jObjOut)
+{
+	Json::CharReaderBuilder rbuilder;
+	Json::Value jRoot;
+	std::string errs;
+	std::istringstream s(input);
+
+	if (!Json::parseFromStream(rbuilder, s, &jRoot, &errs)) {
+		LOGERR("Failed to parse JSON string: %s, error: %s", input.c_str(), errs.c_str());
+		return false;
+	}
+
+	if (!jRoot["params"].isObject()) {
+		LOGERR("No params object found in JSON: %s", input.c_str());
+		return false;
+	}
+
+	jObjOut = jRoot["params"];
+	return true;
+}
+
 bool getResultObject(const string &jsonMsg, Json::Value &result)
 {
     Json::Value root;
@@ -289,6 +310,19 @@ bool convertResultStringToBool(const string &jsonMsg, bool &response)
         status = true;
     }
     return status;
+}
+
+// {"jsonrpc":"2.0","id":1044,"result":null}
+bool isJsonRpcResultNull(const string &jsonMsg)
+{
+	Json::Value root;
+	if (!parseJson(jsonMsg, root))
+		return false;
+
+	if (root.isMember("result") && root["result"].isNull())
+		return true;
+
+	return false;
 }
 
 bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response)
