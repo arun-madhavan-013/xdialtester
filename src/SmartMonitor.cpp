@@ -43,6 +43,8 @@ inline const char* dialEventToString(DIALEVENTS event) {
 
 void SmartMonitor::handleTermSignal(int _signal)
 {
+    (void)_signal;
+
     LOGINFO("Exiting from app..");
 
     unique_lock<std::mutex> ulock(m_lock);
@@ -426,8 +428,6 @@ bool SmartMonitor::checkAndEnableCasting(const string &friendlyname)
 bool SmartMonitor::registerDIALApps(const string &appCallsigns)
 {
     LOGTRACE("Enabling Apps for DIAL casting.. ");
-    bool status = false;
-    string result;
     return tiface->registerXcastApps(appCallsigns);
 }
 
@@ -440,7 +440,5 @@ bool SmartMonitor::getConnectStatus()
 bool SmartMonitor::setStandbyBehaviour()
 {
     LOGTRACE("Enabling standby behaviour as active.. ");
-    bool status = false;
-    string result;
     return tiface->setStandbyBehaviour();
 }
