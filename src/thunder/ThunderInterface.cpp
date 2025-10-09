@@ -51,6 +51,23 @@ void ThunderInterface::onMsgReceived(const string message)
     }
 }
 
+void ThunderInterface::onEventReceived(const Json::Value& event)
+{
+    // Convert JSON event back to string for existing event processing
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = "";
+    std::ostringstream os;
+    std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+    writer->write(event, &os);
+    std::string eventStr = os.str();
+
+    LOGINFO("Event received: %s", eventStr.c_str());
+
+    // Forward to existing event processing system
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    evtHandler->addMessageToEventQueue(eventStr);
+}
+
 ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nullptr), mp_thThread(nullptr)
 {
     mp_handler = new TransportHandler();
@@ -152,21 +169,25 @@ ThunderInterface::ThunderInterface() : m_isInitialized(false), m_connListener(nu
 
 int ThunderInterface::initialize()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     mp_handler->registerConnectionHandler([this](bool isConnected)
                                           { connected(isConnected); });
     mp_handler->registerMessageHandler([this](string message)
                                        { onMsgReceived(message); });
 
+    // Register event handler for Thunder notifications (messages with "method" but no "id")
+    mp_handler->registerEventHandler([this](const Json::Value& event) {
+        onEventReceived(event);
+    });
+
     ResponseHandler::getInstance()->registerEventListener(this);
     int status = mp_handler->initializeTransport();
-    LOGTRACE(" Exit.");
     return status;
 }
 
 ThunderInterface::~ThunderInterface()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
 
     if (mp_handler->isConnected())
     {
@@ -179,12 +200,12 @@ ThunderInterface::~ThunderInterface()
 }
 void ThunderInterface::setThunderConnectionURL(const std::string &wsurl)
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     mp_handler->setConnectURL(wsurl);
 }
 void ThunderInterface::connectToThunder()
 {
-    LOGTRACE(" Enter.");
+    LOGTRACE("%s", __FUNCTION__);
     if (mp_thThread != nullptr)
     {
         // Do we need to join and then delete ?
@@ -195,58 +216,89 @@ void ThunderInterface::connectToThunder()
                                   { handler->connect(); });
 }
 
-bool ThunderInterface::enableCasting(bool enable )
+bool ThunderInterface::enableCasting(bool enable)
 {
-    LOGTRACE("Enter.. ");
+    (void)enable;
+
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
-    std::string jsonmsg = enableCastingToJson();
-
+    std::string jsonmsg = enableCastingToJson(true, msgId);
+    LOGINFO(" Request : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-            convertResultStringToBool(response, status);
+        string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        bool retstat = convertResultStringToBool(response, "success", status);
+        status = retstat ? status : false;
     }
     return status;
 }
 
 bool ThunderInterface::isCastingEnabled(string &result)
 {
-    LOGTRACE("Checking if casting is enabled.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = getThunderMethodToJson("org.rdk.Xcast.1.getEnabled", msgId);
-
+    LOGINFO(" Request : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-         getParamFromResult(response, "enabled", result);
+        string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        getParamFromResult(response, "enabled", result);
     }
     return status;
 }
+
 bool ThunderInterface::getFriendlyName(std::string &name)
 {
-    LOGTRACE("Getting friendly name.. ");
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     std::string jsonmsg = getThunderMethodToJson("org.rdk.System.getFriendlyName", msgId);
+    LOGINFO(" Request : %s", jsonmsg.c_str());
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-         getParamFromResult(response, "friendlyName", name);
+        string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        getParamFromResult(response, "friendlyName", name);
+    }
+    return status;
+}
+
+bool ThunderInterface::setFriendlyName(const std::string &name)
+{
+    LOGTRACE("%s", __FUNCTION__);
+    bool status = false;
+    int msgId = 0;
+    ResponseHandler *evtHandler = ResponseHandler::getInstance();
+    std::string jsonmsg = setFriendlyNameToJson(name, msgId);
+    LOGINFO(" Request : %s", jsonmsg.c_str());
+
+    if (mp_handler->sendMessage(jsonmsg) == 1) // Success
+    {
+        string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        bool retstat = convertResultStringToBool(response, "success", status);
+        status = retstat ? status : false;
     }
     return status;
 }
 
 bool ThunderInterface::getPluginState(const string &myapp, string &state)
 {
-	LOGTRACE("Getting plugin state.. ");
+	LOGTRACE("%s", __FUNCTION__);
 	bool status = false;
 	int msgId = 0;
 
@@ -255,7 +307,12 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 
 	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
 	{
-		string response = evtHandler->getRequestStatus(msgId);
+		string response = evtHandler->getRequestStatus(msgId, 5000);
+
+		if (!isValidJsonResponse(response)) {
+			LOGERR("Invalid or empty response for plugin state request");
+			return status;
+		}
 
 		Json::Value root;
 		Json::CharReaderBuilder builder;
@@ -284,7 +341,7 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 
 bool ThunderInterface::registerXcastApps(const string &appCallsigns)
 {
-    LOGTRACE("%s", __func__);
+    LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
 
@@ -293,7 +350,9 @@ bool ThunderInterface::registerXcastApps(const string &appCallsigns)
     LOGINFO(" Registering Apps  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
+         string response = evtHandler->getRequestStatus(msgId, 3000);
+        if (checkForThunderErrorResponse(response))
+            return false;
          convertResultStringToBool(response, status);
     }
     return status;
@@ -308,6 +367,8 @@ bool ThunderInterface::sendMessage(const string jsonmsg, int msgId, int timeout)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -321,6 +382,8 @@ bool ThunderInterface::sendSubscriptionMessage(const string jsonmsg, int msgId, 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertEventSubResponseToInt(response, status);
     }
     return status == 0;
@@ -371,16 +434,35 @@ void ThunderInterface::registerEvent(const std::string &callsignWithVersion, con
 // Do not call this directly. These are callback functions
 void ThunderInterface::onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams)
 {
-    LOGINFO("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
+    LOGTRACE("%s  %s", dialParams.appName.c_str(), dialParams.appId.c_str());
     if (nullptr != m_dialListener)
         m_dialListener(dialEvent, dialParams);
 }
 
 void ThunderInterface::onRDKShellEvents(const std::string &event, const std::string &params)
 {
-	LOGINFO(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	LOGTRACE(" Event : %s, Params : %s", event.c_str(), params.c_str());
 	if (nullptr != m_rdkShellListener)
 		m_rdkShellListener(event, params);
+}
+
+void ThunderInterface::onControllerStateChangeEvents(const std::string &event, const std::string &params)
+{
+	LOGTRACE(" Event : %s, Params : %s", event.c_str(), params.c_str());
+	if (nullptr != m_controllerStateChangeListener)
+		m_controllerStateChangeListener(event, params);
+}
+
+void ThunderInterface::addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback)
+{
+    m_controllerStateChangeListener = callback;
+    registerEvent("Controller.1.", "statechange", true);
+}
+
+void ThunderInterface::removeControllerStateChangeListener()
+{
+    m_controllerStateChangeListener = nullptr;
+	registerEvent("Controller.1.", "statechange", false);
 }
 
 void ThunderInterface::removeRDKShellListener()
@@ -446,7 +528,9 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return m_appList;
         convertResultStringToArray(response, "clients", m_appList);
     }
     return m_appList;
@@ -454,6 +538,8 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 
 bool ThunderInterface::setAppState(const std::string &appName, const std::string &appId, const std::string &state, int timeout)
 {
+    (void)timeout;
+
     int id = 0;
     bool status = false;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
@@ -463,6 +549,8 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -485,8 +573,6 @@ bool ThunderInterface::reportDIALAppState(const std::string &appName, const std:
 		convertedState = "running";
 	} else if ((convertedState == "suspended") || (convertedState == "hibernated")) {
 		convertedState = "suspended";
-	} else {
-		LOGINFO("Unknown state %s received from app %s, passing it as such.", convertedState.c_str(), appName.c_str());
 	}
 	if ((convertedState == "running") || (convertedState == "stopped") || (convertedState == "hidden") || (convertedState == "suspended"))
 	{
@@ -510,8 +596,11 @@ bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
-        convertResultStringToBool(response, status);
+        string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        bool retStatus = convertResultStringToBool(response, "success", status);
+        status = retStatus ? status : false;
     }
     return status;
 }
@@ -527,6 +616,8 @@ bool ThunderInterface::setStandbyBehaviour()
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
          convertResultStringToBool(response, status);
     }
     return status;
@@ -543,7 +634,9 @@ bool ThunderInterface::suspendPremiumApp(const std::string &appName, int timeout
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -560,7 +653,9 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-        string response = evtHandler->getRequestStatus(id);
+        string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -568,7 +663,6 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
 bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
 {
     int id = 0;
-    bool status = false;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
     string jsonmsg = sendDeepLinkToJson(dialParams, id);
     LOGINFO(" Deep link request API : %s", jsonmsg.c_str());
@@ -576,7 +670,9 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id);
-        convertResultStringToBool(response, status);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        return isJsonRpcResultNull(response);
     }
-    return status;
+    return false;
 }

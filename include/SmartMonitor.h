@@ -23,9 +23,20 @@
 #include <mutex>
 #include <map>
 #include <condition_variable>
+#include "json/json.h"
 // #include "ConfigReader.h"
 #include "thunder/ThunderInterface.h"
 using std::string;
+
+typedef enum { YOUTUBE, NETFLIX, AMAZON, APPLIMIT } DialApps;
+
+typedef struct appDialState_t
+{
+	DialApps app;
+	string appName;
+	string dialState;
+	string pluginState;
+} appDialState_t;
 
 class SmartMonitor
 {
@@ -35,6 +46,7 @@ class SmartMonitor
   volatile bool m_isActive;
   volatile bool isConnected;
   std::mutex m_lock;
+  appDialState_t m_dialApps[DialApps::APPLIMIT];
 
   //  MonitorConfig *config;
 
@@ -44,6 +56,7 @@ class SmartMonitor
 
   void onDialEvent(DIALEVENTS dialEvent, const DialParams &dialParams);
   void onRDKShellEvent(const std::string &event, const std::string &params);
+  void onControllerStateChangeEvent(const std::string &event, const std::string &params);
 
   SmartMonitor();
   ~SmartMonitor();
@@ -58,7 +71,7 @@ public:
   void unRegisterForEvents();
   void waitForTermSignal();
   bool getConnectStatus();
-  bool checkAndEnableCasting();
+  bool checkAndEnableCasting(const string &friendlyname);
   bool registerDIALApps(const string &appCallsigns);
   bool getPluginState(const string &myapp, string &state);
   bool convertPluginStateToDIALState(const std::string &pluginState, std::string &dialState);

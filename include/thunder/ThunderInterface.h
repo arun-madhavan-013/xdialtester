@@ -23,6 +23,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include "json/json.h"
 
 #include "EventUtils.h"
 #include "TransportHandler.h"
@@ -33,13 +34,13 @@ class ThunderInterface : public EventListener
 {
 public:
     ThunderInterface();
+    virtual ~ThunderInterface();
     int initialize();
 
     void setThunderConnectionURL(const std::string &wsurl);
     void connectToThunder();
 
     void shutdown();
-    ~ThunderInterface();
 
     // no copying allowed
     ThunderInterface(const ThunderInterface &) = delete;
@@ -48,6 +49,7 @@ public:
     // Inherited from EventListener class
     void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) override;
 	void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) override;
+	void addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback) override;
 
     void registerConnectStatusListener(std::function<void(bool)> callback)
     {
@@ -55,18 +57,20 @@ public:
     };
     void removeDialListener() override;
     void removeRDKShellListener() override;
+	void removeControllerStateChangeListener() override;
     bool enableCasting(bool enable = true);
     bool isCastingEnabled(std::string &result);
     bool getFriendlyName(std::string &name);
+    bool setFriendlyName(const std::string &name);
     bool registerXcastApps(const std::string &appCallsigns);
     bool getPluginState(const string &myapp, string &state);
     bool setStandbyBehaviour();
-    std::vector<string> & getActiveApplications(int timeout = REQUEST_TIMEOUT_IN_MS);
+    std::vector<string> & getActiveApplications(int timeout = RDKSHELL_TIMEOUT_IN_MS);
     bool setAppState( const std::string &appName, const std::string &appId, const std::string &state, int timeout = REQUEST_TIMEOUT_IN_MS);
     bool reportDIALAppState(const std::string &appName, const std::string &appId, const std::string &state);
-    bool launchPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
-    bool shutdownPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
-    bool suspendPremiumApp(const std::string &appName, int timeout = REQUEST_TIMEOUT_IN_MS);
+    bool launchPremiumApp(const std::string &appName, int timeout = RDKSHELL_TIMEOUT_IN_MS);
+    bool shutdownPremiumApp(const std::string &appName, int timeout = RDKSHELL_TIMEOUT_IN_MS);
+    bool suspendPremiumApp(const std::string &appName, int timeout = RDKSHELL_TIMEOUT_IN_MS);
     bool sendDeepLinkRequest(const DialParams &dialParams);
 
 private:
@@ -80,6 +84,7 @@ private:
 
     void connected(bool connected);
     void onMsgReceived(const std::string message);
+    void onEventReceived(const Json::Value& event);
     void registerEvent(const std::string &event, bool isBinding);
     void registerEvent(const std::string &callsignWithVersion, const std::string &event, bool isBinding);
     bool sendMessage(const std::string jsonmsg, int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
@@ -87,4 +92,5 @@ private:
 
     void onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams) override;
 	void onRDKShellEvents(const std::string &event, const std::string &params) override;
+	void onControllerStateChangeEvents(const std::string &event, const std::string &params) override;
 };

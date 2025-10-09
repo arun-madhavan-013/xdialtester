@@ -20,10 +20,11 @@
 #include "TransportHandler.h"
 #include "EventUtils.h"
 #include <thread>
+#include <string>
+#include <memory>
+#include "json/json.h"
 
 #include <iostream>
-using std::cout;
-using std::endl;
 
 int TransportHandler::initializeTransport()
 {
@@ -55,21 +56,21 @@ int TransportHandler::initializeTransport()
                                      { processResponse(hdl, msg); });
         m_client.set_close_handler([&, this](websocketpp::connection_hdl hdl)
                                    { disconnected(hdl); });
-        cout << "[TransportHandler::initialize] " << "Connecting to " << m_wsUrl << endl;
+        LOGTRACE("[TransportHandler::initialize] Connecting to %s", m_wsUrl.c_str());
     }
     catch (const std::exception &e)
     {
-        cout << "[TransportHandler::initialize] " << e.what() << endl;
+        LOGERR("[TransportHandler::initialize] %s", e.what());
         status = -1;
     }
     catch (websocketpp::lib::error_code e)
     {
-        cout << "[TransportHandler::initialize] " << e.message() << endl;
+        LOGERR("[TransportHandler::initialize] %s", e.message().c_str());
         status = -2;
     }
     catch (...)
     {
-        cout << "[TransportHandler::initialize] other exception" << endl;
+        LOGERR("[TransportHandler::initialize] other exception");
         status = -3;
     }
     return status;
@@ -77,23 +78,27 @@ int TransportHandler::initializeTransport()
 
 void TransportHandler::connect()
 {
-    // Create a connection to the given URI and queue it for connection once
-    // the event loop starts
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::CONNECTING);
+    }
+
     websocketpp::lib::error_code ec;
     wsclient::connection_ptr con = m_client.get_connection(m_wsUrl, ec);
     m_client.connect(con);
 
-    // Start the ASIO io_service run loop
     m_client.run();
 }
 
 int TransportHandler::sendMessage(std::string message)
 {
     if (tdebug)
-        cout << "[TransportHandler::sendMessage] Sending " << message << endl;
-    if (m_isConnected)
+        LOGTRACE("[TransportHandler::sendMessage] Sending %s", message.c_str());
+
+    bool connected = (m_connectionState.load() == ConnectionState::CONNECTED);
+    if (connected)
         m_client.send(m_wsHdl, message, websocketpp::frame::opcode::text);
-    return m_isConnected ? 1 : -1;
+    return connected ? 1 : -1;
 }
 void TransportHandler::disconnect()
 {
@@ -102,29 +107,93 @@ void TransportHandler::disconnect()
 void TransportHandler::connected(websocketpp::connection_hdl hdl)
 {
     if (tdebug)
-        cout << "[TransportHandler::connected] Connected. Ready to send message" << endl;
+        LOGTRACE("[TransportHandler::connected] Connected. Ready to send message");
     m_wsHdl = hdl;
-    m_isConnected = true;
+
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::CONNECTED);
+    }
+    m_stateChanged.notify_all();
+
     if (nullptr != m_conHandler)
         m_conHandler(true);
 }
 void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
 {
+    (void)hdl;
+
     if (tdebug)
-        cout << "[TransportHandler::connectFailed] Connection failed..." << endl;
+        LOGERR("[TransportHandler::connectFailed] Connection failed...");
+
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::ERROR_STATE);
+    }
+    m_stateChanged.notify_all();
+
     if (nullptr != m_conHandler)
         m_conHandler(false);
 }
 void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_ptr msg)
 {
+    (void)hdl;
+
     if (tdebug)
-        cout << "[TransportHandler::processResponse] " << msg->get_payload() << endl;
-    if (nullptr != m_msgHandler)
-        m_msgHandler(msg->get_payload());
+        LOGTRACE("[TransportHandler::processResponse] %s", msg->get_payload().c_str());
+
+    Json::Value message;
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    std::string errors;
+
+    std::string payload = msg->get_payload();
+    bool parsingSuccessful = reader->parse(
+        payload.c_str(),
+        payload.c_str() + payload.size(),
+        &message,
+        &errors);
+
+    if (parsingSuccessful) {
+        if (message.isMember("id")) {
+            if (nullptr != m_msgHandler) {
+                m_msgHandler(msg->get_payload());
+            }
+        } else if (message.isMember("method")) {
+            if (nullptr != m_eventHandler) {
+                m_eventHandler(message);
+            }
+            if (tdebug) {
+                LOGTRACE("[TransportHandler::processResponse] Event notification: %s",
+                        message.get("method", "unknown").asString().c_str());
+            }
+        } else {
+            if (tdebug) {
+                LOGERR("[TransportHandler::processResponse] Unknown message format: %s",
+                       msg->get_payload().c_str());
+            }
+        }
+    } else {
+        if (tdebug) {
+            LOGERR("[TransportHandler::processResponse] JSON parsing failed: %s", errors.c_str());
+        }
+        if (nullptr != m_msgHandler) {
+            m_msgHandler(msg->get_payload());
+        }
+    }
 }
 void TransportHandler::disconnected(websocketpp::connection_hdl hdl)
 {
-    m_isConnected = false;
+    (void)hdl;
+
+    {
+        std::lock_guard<std::mutex> lock(m_stateMutex);
+        m_connectionState.store(ConnectionState::DISCONNECTED);
+    }
+    m_stateChanged.notify_all();
+
+    if (tdebug)
+        LOGTRACE("[TransportHandler::disconnected] Connection closed");
 }
 void TransportHandler::registerConnectionHandler(std::function<void(bool)> callback)
 {
@@ -133,4 +202,19 @@ void TransportHandler::registerConnectionHandler(std::function<void(bool)> callb
 void TransportHandler::registerMessageHandler(std::function<void(const std::string)> callback)
 {
     m_msgHandler = callback;
+}
+
+void TransportHandler::registerEventHandler(EventCallback callback)
+{
+    m_eventHandler = callback;
+}
+
+bool TransportHandler::waitForConnection(std::chrono::milliseconds timeout)
+{
+    std::unique_lock<std::mutex> lock(m_stateMutex);
+
+    return m_stateChanged.wait_for(lock, timeout, [this]() {
+        ConnectionState state = m_connectionState.load();
+        return state == ConnectionState::CONNECTED || state == ConnectionState::ERROR_STATE;
+    });
 }

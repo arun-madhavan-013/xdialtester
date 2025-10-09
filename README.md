@@ -1,12 +1,20 @@
 # xdialtester
 
-Native application to test DIAL functionality in RDK environment without an app manager or system UI. The implementation is based on XCast plugin and RDKShell for supporting app state management and reporting. By default YouTube, Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
+Native application to test DIAL functionality in RDK environment without an app manager or system UI. This implentation is based on *XCast* plugin and *RDKShell* for supporting app state management and reporting. By default YouTube & Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
+
+### The Log Levels
+The application uses color-coded logging for easy debug:
+- 🔴 **ERROR** (RED): Critical errors
+- 🟠 **WARN** (ORANGE): Warnings
+- 🟢 **TRACE** (GREEN): Debug trace information (enabled with `--enable-trace`)
+- ⚪ **INFO** (DEFAULT): General information
 
 ## Features
 
 - **Real-time App Monitoring**: Tracks application lifecycle events (launch, suspend, resume, terminate) with the help of `RDKShell` plugin events.
 - **Debug Logging**: Comprehensive logging with color-coded output along with option to enable extended debug logs.
 - **JSON Configuration**: Override option for app settings using optional `/opt/appConfig.json` - specifying app specific deeplink method and baseurl.
+- **Friendly Name Configuration**: Enables network friendly name settings with default format `RDKE-<8DigitRandomNumber>`
 
 ## Build
 
@@ -20,7 +28,7 @@ Native application to test DIAL functionality in RDK environment without an app 
 If you are building using Yocto, use this command to checkout:
 
 ```bash
-devtool add --autorev xdialtester https://github.com/joseinweb/xdialtester.git --srcbranch develop
+devtool add --autorev xdialtester https://github.com/joseinweb/xdialtester.git --srcbranch main
 ```
 
 Add the following line in the recipe:
@@ -36,19 +44,25 @@ DEPENDS += "jsoncpp websocketpp systemd boost"
 |--------|-------------|---------|
 | `--enable-apps=<apps>` | Comma-separated list of apps | `--enable-apps=YouTube,Netflix,Amazon` |
 | `--enable-debug` | Enable detailed debug logging | `--enable-debug` |
+| `--enable-trace` | Enable trace-level logging (most verbose) | `--enable-trace` |
+| `--friendlyname=<Name>` | Provide custom friendly name | `--friendlyname=RDKE12345` |
 
 ### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SMDEBUG` | Enable debug mode (alternative to --enable-debug) | Not set |
+| `SMDEBUG` | Enable debug(if defined) and trace mode (when its exactly set as "TRACE") | Not set |
 
 ### Basic Usage
 
 Preconditions: Activate required plugins before running this test app.
 ```bash
 curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
-curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":2,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":3,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
+# Use thunder plugin API if below binary is not available.
+SetPowerState ON
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":4,"method":"org.rdk.PowerManager.setPowerState","params":{"keyCode":30,"powerState":"ON","standbyReason":"User Initiated"}}'
 ```
 
 ```bash
@@ -61,8 +75,17 @@ curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":
 # Enable debug logging
 ./xdialtester --enable-debug
 
-# Combination
-./xdialtester --enable-apps=Netflix --enable-debug
+# Enable trace logging (most verbose)
+./xdialtester --enable-trace
+
+# Enable both debug and trace logging
+./xdialtester --enable-debug --enable-trace
+
+# Combination with specific apps
+./xdialtester --enable-apps=Netflix --enable-debug --enable-trace
+
+# Set custom friendly name
+./xdialtester --friendlyname=RDKE12345
 ```
 
 ## Configuration
@@ -116,7 +139,7 @@ This can intake an optional app configuration `/opt/appConfig.json` on startup. 
 The application uses color-coded logging:
 - 🔴 **ERROR** (RED): Critical errors
 - 🟠 **WARN** (ORANGE): Warnings
-- 🟢 **TRACE** (GREEN): Debug trace information
+- 🟢 **TRACE** (GREEN): Debug trace information (enabled with `--enable-trace`)
 - ⚪ **INFO** (DEFAULT): General information
 
 ## Testing DIAL Functionality
@@ -127,6 +150,7 @@ The xdialtester works as a DIAL client that communicates with the RDK Thunder fr
 1. Ensure the mobile app and DUT are on the same network
 2. Ensure Thunder framework is running on your device
 3. Set device IP environment variable:
+4. Ensure device is in proper power state (ON)
 ```bash
 export DEVICEIP=192.168.1.100  # Replace with your device's IP address
 ```
@@ -137,10 +161,16 @@ export DEVICEIP=192.168.1.100  # Replace with your device's IP address
 curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
 
 # Activate RDKShell plugin (handles app lifecycle)
-curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":2,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+
+# Activate System plugin (for setting friendly name etc)
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":3,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
 
 # Verify plugins are active
-curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.status"}'
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":4,"method":"Controller.1.status"}'
+
+# Change device power state to ON if NOT
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":5,"method":"org.rdk.PowerManager.setPowerState","params":{"keyCode":30,"powerState":"ON","standbyReason":"User Initiated"}}'
 
 # Find the correct DIAL port (common ports: 56889 for REST, 56890 for SSDP)
 netstat -tlnp | grep -E ":(56889|56890|56789)"
@@ -148,7 +178,7 @@ netstat -tlnp | grep -E ":(56889|56890|56789)"
 
 3. Start xdialtester application:
 ```bash
-./xdialtester --enable-apps=YouTube,Netflix --enable-debug
+./xdialtester --enable-apps=YouTube,Netflix
 ```
 
 4. Launch the Second screen mobile application to test the casting functionality on First screen.
