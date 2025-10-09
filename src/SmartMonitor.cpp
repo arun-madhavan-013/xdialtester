@@ -428,6 +428,27 @@ bool SmartMonitor::checkAndEnableCasting(const string &friendlyname)
 bool SmartMonitor::registerDIALApps(const string &appCallsigns)
 {
     LOGTRACE("Enabling Apps for DIAL casting.. ");
+    // update app state cache
+    std::string state;
+    if (appCallsigns.find("YouTube") != string::npos) {
+		if (tiface->getPluginState("YouTube", state)) {
+			m_dialApps[YOUTUBE].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[YOUTUBE].dialState);
+		}
+    }
+    if (appCallsigns.find("Netflix") != string::npos) {
+		if (tiface->getPluginState("YouTube", state)) {
+			m_dialApps[NETFLIX].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[NETFLIX].dialState);
+		}
+    }
+    if (appCallsigns.find("Amazon") != string::npos) {
+		if (tiface->getPluginState("Amazon", state)) {
+			m_dialApps[AMAZON].pluginState = state;
+			convertPluginStateToDIALState(state, m_dialApps[AMAZON].dialState);
+		}
+    }
+
     return tiface->registerXcastApps(appCallsigns);
 }
 
