@@ -299,7 +299,12 @@ bool ThunderInterface::getPluginState(const string &myapp, string &state)
 
 	if (mp_handler->sendMessage(jsonmsg) == 1) // Success
 	{
-		string response = evtHandler->getRequestStatus(msgId, 2500);
+		string response = evtHandler->getRequestStatus(msgId, 5000);
+
+		if (!isValidJsonResponse(response)) {
+			LOGERR("Invalid or empty response for plugin state request");
+			return status;
+		}
 
 		Json::Value root;
 		Json::CharReaderBuilder builder;
@@ -337,7 +342,7 @@ bool ThunderInterface::registerXcastApps(const string &appCallsigns)
     LOGINFO(" Registering Apps  : %s", jsonmsg.c_str());
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId, 1500);
+         string response = evtHandler->getRequestStatus(msgId, 3000);
          convertResultStringToBool(response, status);
     }
     return status;

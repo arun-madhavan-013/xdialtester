@@ -52,6 +52,7 @@ bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &r
 bool isJsonRpcResultNull(const string &jsonMsg);
 bool convertEventSubResponseToInt(const string &root, int &);
 bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value);
+bool isValidJsonResponse(const string &response);
 string getClientListToJson(int &id);
 string setAppStateToJson(const string &appName, const string &appId, const string &state, int &id);
 string launchAppToJson(const string &appName, int &id);

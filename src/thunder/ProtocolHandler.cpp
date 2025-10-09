@@ -434,6 +434,22 @@ bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &val
 	return status;
 }
 
+bool isValidJsonResponse(const string &response)
+{
+	if (response.empty()) {
+		LOGERR("Response is empty (likely timeout or error)");
+		return false;
+	}
+
+	Json::Value root;
+	if (!parseJson(response, root)) {
+		LOGERR("Response is not valid JSON: %s", response.c_str());
+		return false;
+	}
+
+	return true;
+}
+
 bool getParamFromResult(const string &jsonMsg, const string &param, string &value)
 {
     bool status = false;
