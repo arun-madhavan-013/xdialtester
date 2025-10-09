@@ -229,6 +229,8 @@ bool ThunderInterface::enableCasting(bool enable)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
         bool retstat = convertResultStringToBool(response, "success", status);
         status = retstat ? status : false;
     }
@@ -247,6 +249,8 @@ bool ThunderInterface::isCastingEnabled(string &result)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
         getParamFromResult(response, "enabled", result);
     }
     return status;
@@ -264,8 +268,10 @@ bool ThunderInterface::getFriendlyName(std::string &name)
 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
-         string response = evtHandler->getRequestStatus(msgId);
-         getParamFromResult(response, "friendlyName", name);
+        string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
+        getParamFromResult(response, "friendlyName", name);
     }
     return status;
 }
@@ -282,6 +288,8 @@ bool ThunderInterface::setFriendlyName(const std::string &name)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
         bool retstat = convertResultStringToBool(response, "success", status);
         status = retstat ? status : false;
     }
@@ -343,6 +351,8 @@ bool ThunderInterface::registerXcastApps(const string &appCallsigns)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId, 3000);
+        if (checkForThunderErrorResponse(response))
+            return false;
          convertResultStringToBool(response, status);
     }
     return status;
@@ -357,6 +367,8 @@ bool ThunderInterface::sendMessage(const string jsonmsg, int msgId, int timeout)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -370,6 +382,8 @@ bool ThunderInterface::sendSubscriptionMessage(const string jsonmsg, int msgId, 
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(msgId, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertEventSubResponseToInt(response, status);
     }
     return status == 0;
@@ -515,6 +529,8 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToArray(response, "clients", m_appList);
     }
     return m_appList;
@@ -533,6 +549,8 @@ bool ThunderInterface::setAppState(const std::string &appName, const std::string
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -579,6 +597,8 @@ bool ThunderInterface::launchPremiumApp(const std::string &appName, int timeout)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         bool retStatus = convertResultStringToBool(response, "success", status);
         status = retStatus ? status : false;
     }
@@ -596,6 +616,8 @@ bool ThunderInterface::setStandbyBehaviour()
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
          string response = evtHandler->getRequestStatus(msgId);
+        if (checkForThunderErrorResponse(response))
+            return false;
          convertResultStringToBool(response, status);
     }
     return status;
@@ -613,6 +635,8 @@ bool ThunderInterface::suspendPremiumApp(const std::string &appName, int timeout
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -630,6 +654,8 @@ bool ThunderInterface::shutdownPremiumApp(const std::string &appName, int timeou
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id, timeout);
+        if (checkForThunderErrorResponse(response))
+            return false;
         convertResultStringToBool(response, status);
     }
     return status;
@@ -644,6 +670,8 @@ bool ThunderInterface::sendDeepLinkRequest(const DialParams &dialParams)
     if (mp_handler->sendMessage(jsonmsg) == 1) // Success
     {
         string response = evtHandler->getRequestStatus(id);
+        if (checkForThunderErrorResponse(response))
+            return false;
         return isJsonRpcResultNull(response);
     }
     return false;

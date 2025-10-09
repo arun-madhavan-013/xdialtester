@@ -312,6 +312,22 @@ bool convertResultStringToBool(const string &jsonMsg, bool &response)
     return status;
 }
 
+bool checkForThunderErrorResponse(const string &jsonMsg)
+{
+	// {"jsonrpc":"2.0","id":4,"error":{"code":-32601,"message":"Method not found"}}
+	Json::Value root;
+	if (!parseJson(jsonMsg, root))
+		return false;
+
+	if (root.isMember("error") && root["error"].isObject()) {
+		Json::Value error = root["error"];
+		string errorString = getStringFromJson(error);
+		LOGERR("Thunder JSON-RPC Error: %s", errorString.c_str());
+		return true;
+	}
+	return false;
+}
+
 // {"jsonrpc":"2.0","id":1044,"result":null}
 bool isJsonRpcResultNull(const string &jsonMsg)
 {
@@ -444,6 +460,10 @@ bool isValidJsonResponse(const string &response)
 	Json::Value root;
 	if (!parseJson(response, root)) {
 		LOGERR("Response is not valid JSON: %s", response.c_str());
+		return false;
+	}
+
+	if (checkForThunderErrorResponse(response)) {
 		return false;
 	}
 

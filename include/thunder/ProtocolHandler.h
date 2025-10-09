@@ -50,6 +50,7 @@ bool convertResultStringToArray(const string &root, const string key, vector<str
 bool convertResultStringToBool(const string &root, bool &);
 bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response);
 bool isJsonRpcResultNull(const string &jsonMsg);
+bool checkForThunderErrorResponse(const string &jsonMsg);
 bool convertEventSubResponseToInt(const string &root, int &);
 bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &value);
 bool isValidJsonResponse(const string &response);
