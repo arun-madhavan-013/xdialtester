@@ -530,7 +530,7 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
     {
         string response = evtHandler->getRequestStatus(id, timeout);
         if (checkForThunderErrorResponse(response))
-            return false;
+            return m_appList;
         convertResultStringToArray(response, "clients", m_appList);
     }
     return m_appList;
