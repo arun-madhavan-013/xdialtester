@@ -1,11 +1,13 @@
 # xdialtester
 
-Native application to test DIAL functionality in RDK environment without an app manager or system UI. The ### Log Levels
-The application uses color-coded logging:
+Native application to test DIAL functionality in RDK environment without an app manager or system UI. This implentation is based on *XCast* plugin and *RDKShell* for supporting app state management and reporting. By default YouTube & Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
+
+### The Log Levels
+The application uses color-coded logging for easy debug:
 - 🔴 **ERROR** (RED): Critical errors
 - 🟠 **WARN** (ORANGE): Warnings
 - 🟢 **TRACE** (GREEN): Debug trace information (enabled with `--enable-trace`)
-- ⚪ **INFO** (DEFAULT): General informationentation is based on XCast plugin and RDKShell for supporting app state management and reporting. By default YouTube, Netflix are supported based on `Cobalt` and `Netflix` thunder plugin `callsign` availability.
+- ⚪ **INFO** (DEFAULT): General information
 
 ## Features
 
@@ -26,7 +28,7 @@ The application uses color-coded logging:
 If you are building using Yocto, use this command to checkout:
 
 ```bash
-devtool add --autorev xdialtester https://github.com/joseinweb/xdialtester.git --srcbranch develop
+devtool add --autorev xdialtester https://github.com/joseinweb/xdialtester.git --srcbranch main
 ```
 
 Add the following line in the recipe:
@@ -56,9 +58,11 @@ DEPENDS += "jsoncpp websocketpp systemd boost"
 Preconditions: Activate required plugins before running this test app.
 ```bash
 curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
-curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
-curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
-
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":2,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":3,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
+# Use thunder plugin API if below binary is not available.
+SetPowerState ON
+curl -X POST http://127.0.0.1:9998/jsonrpc -d '{"jsonrpc":"2.0","id":4,"method":"org.rdk.PowerManager.setPowerState","params":{"keyCode":30,"powerState":"ON","standbyReason":"User Initiated"}}'
 ```
 
 ```bash
@@ -146,6 +150,7 @@ The xdialtester works as a DIAL client that communicates with the RDK Thunder fr
 1. Ensure the mobile app and DUT are on the same network
 2. Ensure Thunder framework is running on your device
 3. Set device IP environment variable:
+4. Ensure device is in proper power state (ON)
 ```bash
 export DEVICEIP=192.168.1.100  # Replace with your device's IP address
 ```
@@ -156,13 +161,16 @@ export DEVICEIP=192.168.1.100  # Replace with your device's IP address
 curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.Xcast"}}'
 
 # Activate RDKShell plugin (handles app lifecycle)
-curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":2,"method":"Controller.1.activate","params":{"callsign":"org.rdk.RDKShell"}}'
 
 # Activate System plugin (for setting friendly name etc)
-curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":3,"method":"Controller.1.activate","params":{"callsign":"org.rdk.System"}}'
 
 # Verify plugins are active
-curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":1,"method":"Controller.1.status"}'
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":4,"method":"Controller.1.status"}'
+
+# Change device power state to ON if NOT
+curl -X POST http://$DEVICEIP:9998/jsonrpc -d '{"jsonrpc":"2.0","id":5,"method":"org.rdk.PowerManager.setPowerState","params":{"keyCode":30,"powerState":"ON","standbyReason":"User Initiated"}}'
 
 # Find the correct DIAL port (common ports: 56889 for REST, 56890 for SSDP)
 netstat -tlnp | grep -E ":(56889|56890|56789)"
