@@ -34,13 +34,13 @@ class ThunderInterface : public EventListener
 {
 public:
     ThunderInterface();
+    virtual ~ThunderInterface();
     int initialize();
 
     void setThunderConnectionURL(const std::string &wsurl);
     void connectToThunder();
 
     void shutdown();
-    ~ThunderInterface();
 
     // no copying allowed
     ThunderInterface(const ThunderInterface &) = delete;

@@ -102,8 +102,8 @@ class ResponseHandler
     void addMessageToResponseQueueImproved(int msgId, const std::string& msg);
 
 protected:
-    ResponseHandler() : mp_listener(nullptr), mp_thandle(nullptr), mp_cleanupThread(nullptr),
-                       m_runLoop(true), m_useImprovedLogic(true) {}
+    ResponseHandler() : mp_thandle(nullptr), mp_cleanupThread(nullptr), m_runLoop(true),
+                       m_useImprovedLogic(true), mp_listener(nullptr) {}
     ~ResponseHandler() {}
 
 public:

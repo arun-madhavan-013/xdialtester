@@ -220,9 +220,9 @@ string ResponseHandler::getRequestStatusImproved(int msgId, int timeout)
         }
     } else {
         LOGTRACE("Request %d timed out", msgId);
-        auto it = m_pendingRequests.find(msgId);
-        if (it != m_pendingRequests.end()) {
-            it->second->state = RequestState::TIMEOUT;
+        auto timeoutIt = m_pendingRequests.find(msgId);
+        if (timeoutIt != m_pendingRequests.end()) {
+            timeoutIt->second->state = RequestState::TIMEOUT;
         }
     }
 
@@ -335,6 +335,7 @@ void ResponseHandler::addMessageToEventQueue(const std::string& msg)
 
 void ResponseHandler::connectionEvent(bool connected)
 {
+    (void)connected;
     // This needs to be revisited.
 }
 

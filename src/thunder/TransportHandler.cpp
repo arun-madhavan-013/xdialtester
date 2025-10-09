@@ -121,6 +121,8 @@ void TransportHandler::connected(websocketpp::connection_hdl hdl)
 }
 void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
 {
+    (void)hdl;
+
     if (tdebug)
         LOGERR("[TransportHandler::connectFailed] Connection failed...");
 
@@ -135,6 +137,8 @@ void TransportHandler::connectFailed(websocketpp::connection_hdl hdl)
 }
 void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_ptr msg)
 {
+    (void)hdl;
+
     if (tdebug)
         LOGTRACE("[TransportHandler::processResponse] %s", msg->get_payload().c_str());
 
@@ -180,6 +184,8 @@ void TransportHandler::processResponse(websocketpp::connection_hdl hdl, message_
 }
 void TransportHandler::disconnected(websocketpp::connection_hdl hdl)
 {
+    (void)hdl;
+
     {
         std::lock_guard<std::mutex> lock(m_stateMutex);
         m_connectionState.store(ConnectionState::DISCONNECTED);

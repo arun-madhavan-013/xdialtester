@@ -46,6 +46,8 @@ protected:
     std::function<void(const std::string &, const std::string &)> m_controllerStateChangeListener;
 
 public:
+    virtual ~EventListener() = default;
+
     virtual void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) = 0;
     virtual void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) = 0;
     virtual void addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback) = 0;

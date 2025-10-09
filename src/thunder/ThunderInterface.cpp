@@ -218,6 +218,8 @@ void ThunderInterface::connectToThunder()
 
 bool ThunderInterface::enableCasting(bool enable)
 {
+    (void)enable;
+
     LOGTRACE("%s", __FUNCTION__);
     bool status = false;
     int msgId = 0;
@@ -515,6 +517,8 @@ std::vector<string> &ThunderInterface::getActiveApplications(int timeout)
 
 bool ThunderInterface::setAppState(const std::string &appName, const std::string &appId, const std::string &state, int timeout)
 {
+    (void)timeout;
+
     int id = 0;
     bool status = false;
     ResponseHandler *evtHandler = ResponseHandler::getInstance();
