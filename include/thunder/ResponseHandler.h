@@ -86,10 +86,6 @@ class ResponseHandler
     void processEvent(const std::string& eventMsg);
     std::string extractParamsFromJsonRpc(const std::string& jsonRpcMsg);
 
-    // Core methods
-    std::string getRequestStatus(int msgId, int timeout);
-    void addMessageToResponseQueue(int msgId, const std::string& msg);
-
 protected:
     ResponseHandler() : mp_thandle(nullptr), mp_cleanupThread(nullptr), m_runLoop(true),
                        mp_listener(nullptr) {}
@@ -101,9 +97,9 @@ public:
     void shutdown();
 
     void handleEvent();
-    void addMessageToResponseQueue(int msgId, const std::string& msg);
     void addMessageToEventQueue(const std::string& msg);
     void connectionEvent(bool connected);
+    void addMessageToResponseQueue(int msgId, const std::string& msg);
     std::string getRequestStatus(int msgId, int timeout = REQUEST_TIMEOUT_IN_MS);
 
     // Async operations
