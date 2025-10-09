@@ -43,15 +43,21 @@ class EventListener
 protected:
     std::function<void(DIALEVENTS, const DialParams &)> m_dialListener;
     std::function<void(const std::string &, const std::string &)> m_rdkShellListener;
+    std::function<void(const std::string &, const std::string &)> m_controllerStateChangeListener;
 
 public:
+    virtual ~EventListener() = default;
+
     virtual void registerDialRequests(std::function<void(DIALEVENTS, const DialParams &)> callback) = 0;
     virtual void registerRDKShellEvents(std::function<void(const std::string &, const std::string &)> callback) = 0;
+    virtual void addControllerStateChangeListener(std::function<void(const std::string &, const std::string &)> callback) = 0;
 
     virtual void removeDialListener() = 0;
     virtual void removeRDKShellListener() = 0;
+	virtual void removeControllerStateChangeListener() = 0;
 
     // Do not call this directly. These are callback functions
     virtual void onDialEvents(DIALEVENTS dialEvent, const DialParams &dialParams) = 0;
 	virtual void onRDKShellEvents(const std::string &event, const std::string &params) = 0;
+	virtual void onControllerStateChangeEvents(const std::string &event, const std::string &params) = 0;
 };

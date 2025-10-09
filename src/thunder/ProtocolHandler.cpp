@@ -30,7 +30,9 @@ class ThunderInterface;
 extern std::vector<AppConfig> g_appConfigList;
 
 static int event_id = 1001;
-string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);void addVersion(Json::Value &root, int &id)
+string getSubscribtionRequest(const string &callsign, const string &event, bool subscribe, int &id, int eventId = -1);
+
+void addVersion(Json::Value &root, int &id)
 {
     root["jsonrpc"] = "2.0";
     id = event_id;
@@ -130,10 +132,25 @@ string getRegisterAppToJson(int &id, const string &appCallsigns)
 
     return getStringFromJson(root);
 }
-string enableCastingToJson(bool enable)
+
+string setFriendlyNameToJson(const std::string &name, int &id)
+{
+	Json::Value root;
+	addVersion(root, id);
+
+	root["method"] = "org.rdk.System.setFriendlyName";
+
+	Json::Value params;
+	params["friendlyName"] = name;
+
+	root["params"] = params;
+
+	return getStringFromJson(root);
+}
+
+string enableCastingToJson(bool enable, int &id)
 {
     Json::Value root;
-    int id = 0;
     addVersion(root, id);
 
     root["method"] = "org.rdk.Xcast.1.setEnabled";
@@ -145,6 +162,7 @@ string enableCastingToJson(bool enable)
 
     return getStringFromJson(root);
 }
+
 string isCastingEnabledToJson(int &id)
 {
     return getThunderMethodToJson("org.rdk.Xcast.1.getEnabled", id);
@@ -223,6 +241,27 @@ bool parseJson(const string &jsonMsg, Json::Value &root)
     return parsingSuccessful;
 }
 
+bool getParamObjectFromJsonString(const std::string &input, Json::Value &jObjOut)
+{
+	Json::CharReaderBuilder rbuilder;
+	Json::Value jRoot;
+	std::string errs;
+	std::istringstream s(input);
+
+	if (!Json::parseFromStream(rbuilder, s, &jRoot, &errs)) {
+		LOGERR("Failed to parse JSON string: %s, error: %s", input.c_str(), errs.c_str());
+		return false;
+	}
+
+	if (!jRoot["params"].isObject()) {
+		LOGERR("No params object found in JSON: %s", input.c_str());
+		return false;
+	}
+
+	jObjOut = jRoot["params"];
+	return true;
+}
+
 bool getResultObject(const string &jsonMsg, Json::Value &result)
 {
     Json::Value root;
@@ -272,6 +311,54 @@ bool convertResultStringToBool(const string &jsonMsg, bool &response)
     }
     return status;
 }
+
+bool checkForThunderErrorResponse(const string &jsonMsg)
+{
+	// {"jsonrpc":"2.0","id":4,"error":{"code":-32601,"message":"Method not found"}}
+	Json::Value root;
+	if (!parseJson(jsonMsg, root))
+		return false;
+
+	if (root.isMember("error") && root["error"].isObject()) {
+		Json::Value error = root["error"];
+		string errorString = getStringFromJson(error);
+		LOGERR("Thunder JSON-RPC Error: %s", errorString.c_str());
+		return true;
+	}
+	return false;
+}
+
+// {"jsonrpc":"2.0","id":1044,"result":null}
+bool isJsonRpcResultNull(const string &jsonMsg)
+{
+	Json::Value root;
+	if (!parseJson(jsonMsg, root))
+		return false;
+
+	if (root.isMember("result") && root["result"].isNull())
+		return true;
+
+	return false;
+}
+
+bool convertResultStringToBool(const string &jsonMsg, const string &key, bool &response)
+{
+	Json::Value result;
+	bool status = false;
+
+	if (!getResultObject(jsonMsg, result))
+		return status;
+
+	Json::Value bstat = result[key];
+
+	if (bstat.isBool())
+	{
+		response = bstat.asBool();
+		status = true;
+	}
+	return status;
+}
+
 /*
     Expecting some thing like
     {"jsonrpc":"2.0","id":1001,"result":0}
@@ -361,6 +448,26 @@ bool getValueOfKeyFromJson(const string &jsonMsg, const string &key, string &val
 		}
 	}
 	return status;
+}
+
+bool isValidJsonResponse(const string &response)
+{
+	if (response.empty()) {
+		LOGERR("Response is empty (likely timeout or error)");
+		return false;
+	}
+
+	Json::Value root;
+	if (!parseJson(response, root)) {
+		LOGERR("Response is not valid JSON: %s", response.c_str());
+		return false;
+	}
+
+	if (checkForThunderErrorResponse(response)) {
+		return false;
+	}
+
+	return true;
 }
 
 bool getParamFromResult(const string &jsonMsg, const string &param, string &value)

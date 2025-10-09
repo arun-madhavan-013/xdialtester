@@ -30,6 +30,7 @@ using std::string;
 #include "EventListener.h"
 
 #define REQUEST_TIMEOUT_IN_MS 1000
+#define RDKSHELL_TIMEOUT_IN_MS 5000
 
 // These will be used for memory events to differentiate between critical and low memory states.
 template <typename T>
@@ -62,6 +63,7 @@ inline bool stringCompareIgnoreCase(const std::string &a, const std::string &b)
 }
 extern bool debug;
 extern bool tdebug;
+extern bool traceEnabled;
 bool isDebugEnabled();
 
 bool getMessageId(const string &jsonMsg, int &msgId);
@@ -78,12 +80,9 @@ bool getParamFromResult(const string &jsonMsg, const string & param, string &val
 #define COLOR_ORANGE  "\033[33m"
 #define COLOR_WHITE   "\033[37m"
 #define COLOR_GREEN   "\033[32m"
+#define COLOR_CYAN    "\033[36m"
 
-#ifdef ENABLE_TRACELOGS
-#define LOGTRACE(fmt, ...) do { fprintf(stderr, COLOR_GREEN "TRACE [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
-#else
-#define LOGTRACE(fmt, ...) do { } while (0)
-#endif
+#define LOGTRACE(fmt, ...) do { if (traceEnabled) { fprintf(stderr, COLOR_GREEN "TRACE [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } } while (0)
 
 #define LOGINFO(fmt, ...) do { fprintf(stderr, COLOR_WHITE "INFO [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)
 #define LOGWARN(fmt, ...) do { fprintf(stderr, COLOR_ORANGE "WARN [%s:%d] %s: " fmt COLOR_RESET "\n",  __FILENAME__, __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); } while (0)

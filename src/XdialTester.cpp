@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <random>
 #include <systemd/sd-daemon.h>
 
 #include "SmartMonitor.h"
@@ -27,21 +28,31 @@
 // Global debug variables - check environment variable or command line flag
 bool debug = (getenv("SMDEBUG") != NULL);
 bool tdebug = (getenv("SMDEBUG") != NULL);
+bool traceEnabled = (getenv("SMDEBUG") != NULL && std::string(getenv("SMDEBUG")) == "TRACE");
 
-static const char *VERSION = "1.1.1";
+static const char *VERSION = "2.0.0";
 
 #ifndef GIT_SHORT_SHA
 #define GIT_SHORT_SHA "unknown"
 #endif
 
+// Generate 8-digit random number for default friendly name
+std::string generateDefaultFriendlyName() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(10000000, 99999999);
+    return "RDKE-" + std::to_string(dis(gen));
+}
+
 /***
  * Main entry point for the application
- * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug]
+ * Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace] [--friendlyname=myDevice12345]
  */
 int main(int argc, char *argv[])
 {
     LOGINFO("Smart Monitor: %s (%s)" , VERSION, GIT_SHORT_SHA);
     string appCallsigns = "YouTube,Netflix,Amazon";
+    string friendlyname = generateDefaultFriendlyName();
     if (argc > 1) {
 		for (int i = 1; i < argc; i++) {
 		    string arg = argv[i];
@@ -52,8 +63,13 @@ int main(int argc, char *argv[])
 			    debug = true;
 			    tdebug = true;
 			    LOGINFO("Debug mode enabled");
+		    } else if (arg == "--enable-trace") {
+			    traceEnabled = true;
+			    LOGINFO("Trace logging enabled");
+			} else if (arg.find("--friendlyname=") != string::npos) {
+				friendlyname = arg.substr(arg.find("=") + 1);
 		    } else {
-			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3", arg.c_str());
+			    LOGERR("Invalid argument %s. Usage: xdialtester --enable-apps=app1,app2,app3 [--enable-debug] [--enable-trace] [--friendlyname=myDevice12345]", arg.c_str());
 			    return -1;
 		    }
 		}
@@ -70,7 +86,7 @@ int main(int argc, char *argv[])
     } while (!smon->getConnectStatus());
     smon->registerForEvents();
     smon->setStandbyBehaviour();
-    smon->checkAndEnableCasting();
+    smon->checkAndEnableCasting(friendlyname);
 	LOGINFO("Enabling DIAL apps: %s", appCallsigns.c_str());
     smon->registerDIALApps(appCallsigns);
     smon->waitForTermSignal();
